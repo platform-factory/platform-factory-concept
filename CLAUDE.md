@@ -10,6 +10,9 @@ implementation will be a GitHub org of seven repos (see README topology).
 - `docs/design/` — the core design docs (platform pattern, knowledge layer,
   factory framing/articulation)
 - `docs/adr/` — decision records, numbered; ADRs are **superseded, never edited**
+- `docs/build-log/` — build-as-experiment evidence trail (ADR-0008): the
+  claims register is append-only and grades change only via a linked
+  build-log entry; every build milestone ends with an entry
 - `research/` — primary-source research digests with confidence labels
 - `CLAUDE.local.md` — private working context, gitignored; read it at session
   start, never commit it or copy its contents into public files

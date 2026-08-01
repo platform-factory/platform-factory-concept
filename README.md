@@ -4,8 +4,11 @@ An opinionated developer-platform pattern — GitOps control plane, approval-bou
 repo topology, and a knowledge-as-code layer — with a **GCP reference
 implementation** built on GKE, Argo CD, Crossplane, Gateway API, and Kyverno.
 
-> **Status: design phase.** Design docs and research are in; the org scaffold and
-> live cluster come next. Follow along — this repo is being built in public.
+> **Status: design complete, build phase starting.** The build runs as a
+> pre-registered experiment: the design's falsifiable claims are recorded in
+> [the claims register](docs/build-log/claims-register.md) *before* the build,
+> and each milestone grades them with evidence — including the misses. Follow
+> along — this repo is being built in public.
 
 ## The pattern in five sentences
 
@@ -59,6 +62,8 @@ deliberately covers both clouds' primitives. See
 - `docs/design/` — the platform pattern, the knowledge-as-code layer, and the
   factory framing (the personas it serves + the autonomy narrative), in full
 - `docs/adr/` — decision records (the knowledge layer, dogfooded from day one)
+- `docs/build-log/` — the build-as-experiment method (ADR-0008): the
+  pre-registered claims register and one evidence entry per build milestone
 - `research/` — primary-source research digests: API gateway landscape 2026,
   Crossplane v2 review, Kubernetes egress control 2026
 

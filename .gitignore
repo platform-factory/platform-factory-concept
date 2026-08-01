@@ -1,0 +1,6 @@
+# Private working context — never commit
+CLAUDE.local.md
+.claude/settings.local.json
+
+# OS noise
+.DS_Store

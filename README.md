@@ -57,15 +57,36 @@ swapping the provider family is the portability story, and the research here
 deliberately covers both clouds' primitives. See
 [ADR-0005](docs/adr/0005-gcp-crossplane-reference-implementation.md).
 
+## Architecture at a glance
+
+The whole pattern — a change enters as a PR, CODEOWNERS routes it to the right
+approver by which repo it touches, Argo CD pulls the result, and admission
+policy (not review meetings) enforces the guardrails on the way in:
+
+![Platform Factory overall architecture](docs/diagrams/overall-architecture.png)
+
+The floor it stands on — `platform-bootstrap`'s Terraform layers, split by
+lifecycle so the expensive parts are torn down between working sessions and
+the network (and its VPN to other networks) persists:
+
+![Terraform layer-0 GCP architecture](docs/diagrams/gcp-layer0-architecture.png)
+
+Interactive versions of both (zoomable, light/dark) live in
+[`docs/diagrams/`](docs/diagrams/) — open the HTML files locally.
+
 ## What's in this repo now
 
 - `docs/design/` — the platform pattern, the knowledge-as-code layer, and the
   factory framing (the personas it serves + the autonomy narrative), in full
 - `docs/adr/` — decision records (the knowledge layer, dogfooded from day one)
 - `docs/build-log/` — the build-as-experiment method (ADR-0008): the
-  pre-registered claims register and one evidence entry per build milestone
+  pre-registered claims register, one graded evidence entry per milestone, and
+  the in-progress [M1 entry](docs/build-log/m1-spine.md) accumulating
+  surprises in real time
+- `docs/diagrams/` — architecture diagrams: static snapshots above,
+  interactive HTML originals
 - `research/` — primary-source research digests: API gateway landscape 2026,
-  Crossplane v2 review, Kubernetes egress control 2026
+  Crossplane v2 review, Kubernetes egress control 2026, prior-art landscape
 
 ## Provenance
 

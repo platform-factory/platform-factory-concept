@@ -466,7 +466,7 @@ flowchart TD
       vpn["HA VPN gateway + Cloud Router<br/>ASN 64514 · gated by enable_vpn"]
     end
     subgraph ephem["torn down between sessions"]
-      gke["GKE zonal cluster<br/>2× e2-standard-4 spot · workload identity"]
+      gke["GKE regional cluster · private nodes<br/>Cloud NAT · workload identity"]
       argo["Argo CD 10.2.2<br/>root Application · manual sync"]
     end
   end
@@ -504,7 +504,7 @@ flowchart TD
       <p class="layer-card__role">The substrate everything else assumes exists. Starts on local
       state, then migrates itself into the bucket it creates.</p>
       <ul>
-        <li><code>google_project</code> platform-factory-ref, billing linked</li>
+        <li><code>google_project</code> under the thecloudgeek.io org, billing linked</li>
         <li>7 enabled APIs (compute, container, iam, …)</li>
         <li>GCS state bucket <code>&lt;project&gt;-tfstate</code>, versioned</li>
       </ul>
@@ -531,15 +531,15 @@ flowchart TD
         <span class="layer-card__name">2-cluster</span>
         <span class="layer-card__badge">torn down · compute</span>
       </div>
-      <p class="layer-card__role">The expensive part. Reads network facts from
-      <code>1-network</code>'s remote state by name — so it can die and be reborn without touching
-      the VPC.</p>
+      <p class="layer-card__role">The expensive part, configured corp-real (ADR-0009): regional
+      control plane, private nodes. Reads network facts from <code>1-network</code>'s remote state
+      by name — so it can die and be reborn without touching the VPC.</p>
       <ul>
-        <li>GKE zonal <code>us-central1-a</code> (free mgmt tier) · VPC-native</li>
-        <li>Workload identity · REGULAR channel · deletion protection off</li>
-        <li>Node pool: 2× <code>e2-standard-4</code> spot, autoscale 1–3</li>
+        <li>GKE regional <code>us-central1</code> · private nodes + Cloud NAT</li>
+        <li>API endpoint locked to authorized networks · workload identity</li>
+        <li>Node pool: <code>e2-standard-4</code> on-demand, shielded, 1–2 per zone</li>
       </ul>
-      <div class="layer-card__cost"><strong>Bills hourly while up</strong> · destroyed at session end</div>
+      <div class="layer-card__cost"><strong>~$0.50/hr while up</strong> (regional fee + nodes) · destroyed at session end</div>
     </div>
 
     <div class="layer-card layer-card--teardown animate" style="--i:8">
@@ -568,7 +568,7 @@ flowchart TD
       <div class="rhythm-step rhythm-step--build">
         <div class="when">session start</div>
         <div class="what">apply 2-cluster</div>
-        <div class="how">GKE up in ~10 min</div>
+        <div class="how">regional GKE up in ~10–15 min</div>
       </div>
       <div class="rhythm-arrow">→</div>
       <div class="rhythm-step rhythm-step--build">
@@ -620,7 +620,7 @@ flowchart TD
   </div>
 
   <footer class="animate" style="--i:14">
-    zoom out: <a href="platform-factory-overall-architecture.html">overall Platform Factory architecture</a> · platform-bootstrap PR #1 · design seed: <a href="https://github.com/thecloudgeek/platform-factory">thecloudgeek/platform-factory</a> · generated 2026-08-03
+    zoom out: <a href="platform-factory-overall-architecture.html">overall Platform Factory architecture</a> · platform-bootstrap PR #1 · design seed: <a href="https://github.com/thecloudgeek/platform-factory">thecloudgeek/platform-factory</a> · updated 2026-08-06 (corp-real posture, ADR-0009)
   </footer>
 
 </div>

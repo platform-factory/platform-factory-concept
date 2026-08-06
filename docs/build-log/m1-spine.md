@@ -60,7 +60,17 @@
    for the pattern docs: **identity and reachability persist; compute is
    disposable.** Cost yields to realism where they conflict (an idle VPN
    tunnel's ~$35–40/mo is the price of the theory being provable).
-4. **"Terraform's last job" cuts earlier than the first execution attempt.**
+4. **The one-off network correction generalized into a standing rule
+   (ADR-0009).** After the VPC promotion, the remaining cost shortcuts got
+   re-examined and reversed as a set — zonal → regional control plane,
+   public → private nodes (+ Cloud NAT + Private Google Access), spot →
+   on-demand, unrestricted → authorized-networks API endpoint. Ronak's
+   framing (Aug 6): "mock a real env as much as possible over costs —
+   configure it like a normal corp environment would look and behave."
+   Caught pre-apply, so it's a diff on an open PR; a week later it would
+   have been a live migration. Recorded as ADR-0009: cost yields to realism;
+   C-02's cheapness claim now gets tested with the corporate-shaped bill.
+5. **"Terraform's last job" cuts earlier than the first execution attempt.**
    The first instinct was `gcloud projects create` + billing link by hand,
    then Terraform from the VPC down. Corrected mid-session (Ronak): if
    Terraform ends at layer 0, layer 0 should *begin* at the project. The

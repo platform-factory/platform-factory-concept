@@ -126,6 +126,17 @@
   assumed. Found by reconciling the chart's actual values at the pinned tag
   against the remote-repo list — the kind of silent egress dependency the
   ADR-0010 posture exists to surface. A sixth remote repo covers it.
+- **[C] GKE node-SA guidance consolidated (verified 2026-08-06** against
+  Google's current node-service-accounts and cluster-hardening docs): the
+  long-standing four-granular-role pattern (logging.logWriter,
+  monitoring.metricWriter, monitoring.viewer,
+  stackdriver.resourceMetadata.writer) is superseded by one predefined
+  role, `roles/container.defaultNodeServiceAccount`. The old pattern is
+  still what blogs — and this build's own first spec — repeat; the fourth
+  legacy role no longer appears in current docs at all. Also verified: orgs
+  created after 2024-05-03 disable automatic IAM grants for default
+  service accounts, which is what makes a dedicated node SA a functional
+  requirement here, not just hygiene.
 - **[C] `kubernetes_manifest` cannot bootstrap a CRD-typed object** onto a
   cluster that doesn't have the CRD yet (schema validation runs at plan
   time). The root Argo CD Application therefore rides in via the chart's

@@ -110,6 +110,22 @@
   the method: "validate passed" is weaker evidence than it reads as; CI
   gates built later (C-11, C-22 territory) should not treat validate as
   proof that input guards hold.
+- **[C] Artifact Registry remote-repo upstream coverage (verified
+  2026-08-06** against the AR product docs and provider v7.42.0 docs):
+  Docker Hub is the only preset; ghcr.io, registry-1.docker.io,
+  public.ecr.aws, and registry.k8s.io are documented custom Docker
+  upstreams; quay.io works (live example in terraform-provider-google
+  issue #20278). Provider note: `docker_repository.custom_repository` is
+  deprecated in v7.42 in favor of `common_repository` — another
+  training-data trap avoided by checking. **[I] xpkg.upbound.io**: speaks
+  the Docker Registry V2 protocol (direct probe) but has no documented or
+  observed use as an AR remote — flagged in-code, re-verify at M2 before
+  Crossplane depends on it.
+- **[C] argo-cd chart 10.2.2 pulls redis from AWS's ECR Public Gallery**
+  (`ecr-public.aws.com`, an alias of `public.ecr.aws`), not Docker Hub as
+  assumed. Found by reconciling the chart's actual values at the pinned tag
+  against the remote-repo list — the kind of silent egress dependency the
+  ADR-0010 posture exists to surface. A sixth remote repo covers it.
 - **[C] `kubernetes_manifest` cannot bootstrap a CRD-typed object** onto a
   cluster that doesn't have the CRD yet (schema validation runs at plan
   time). The root Argo CD Application therefore rides in via the chart's

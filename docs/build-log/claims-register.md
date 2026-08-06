@@ -34,6 +34,7 @@ Grades: **UNTESTED** → **HELD** | **ADJUSTED** (superseding ADR linked) |
 | C-20 | Gates can be three-outcome in practice | M4 | UNTESTED |
 | C-21 | Agents operate PR-only with their own identity, fully attributable | M4 | UNTESTED |
 | C-22 | Knowledge freshness and the question bank work as CI | M4 | UNTESTED |
+| C-23 | Image pulls ride the Google-API path; internet egress reduces to git (added 2026-08-06) | M1 | UNTESTED |
 
 ## M1 — Spine
 
@@ -63,6 +64,17 @@ Grades: **UNTESTED** → **HELD** | **ADJUSTED** (superseding ADR linked) |
   **Test:** fresh cluster reaches all-synced from empty with no manual
   ordering. **Data:** CRD-race / sync-wave workarounds required (a known
   friction the design doesn't currently acknowledge).
+- **C-23 — Image plane on the Google-API path.** (ADR-0010; added 2026-08-06,
+  during M1 — the register allows dated additions.)
+  With private nodes + Private Google Access, every cluster image pull is
+  served by Artifact Registry remote repositories (`*.pkg.dev`); the only
+  internet egress the cluster generates is Argo CD's git traffic to GitHub
+  through Cloud NAT.
+  **Test:** with the cluster up and Argo CD running, inspect NAT logs / VPC
+  flow logs: no egress to public registries; image pulls resolve to the
+  Google-API path. **Data:** the list of upstream registries proxied; any
+  image that could not be served through a remote repo and what was done
+  about it.
 
 ## M2 — Paved road
 

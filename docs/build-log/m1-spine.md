@@ -70,7 +70,16 @@
    Caught pre-apply, so it's a diff on an open PR; a week later it would
    have been a live migration. Recorded as ADR-0009: cost yields to realism;
    C-02's cheapness claim now gets tested with the corporate-shaped bill.
-5. **"Terraform's last job" cuts earlier than the first execution attempt.**
+5. **"Only GCP APIs" was almost right — and the wrong storage idea led to
+   the right architecture (ADR-0010, C-23).** Ronak proposed preloading
+   Crossplane to a GCS bucket so the cluster needs nothing but Google APIs.
+   GCS can't speak the OCI registry protocol, but the posture was correct:
+   Artifact Registry remote repositories put every image pull on the
+   Google-API path (Private Google Access), and the cluster's internet
+   egress collapses to one named pinhole — Argo CD's git pulls from GitHub —
+   which M3's FQDN work (C-14) then formalizes. Added C-23 to the register
+   (dated, append-only) to grade this at M1.
+6. **"Terraform's last job" cuts earlier than the first execution attempt.**
    The first instinct was `gcloud projects create` + billing link by hand,
    then Terraform from the VPC down. Corrected mid-session (Ronak): if
    Terraform ends at layer 0, layer 0 should *begin* at the project. The

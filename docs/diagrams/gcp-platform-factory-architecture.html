@@ -390,6 +390,12 @@
   .callout--gitops code { background: var(--gitops-dim); color: var(--gitops); }
   .callout--manual code { background: var(--peer-dim); color: var(--peer); }
 
+  .callout--persist {
+    border-left-color: var(--persist);
+    margin-top: 14px;
+  }
+  .callout--persist code { background: var(--persist-dim); color: var(--persist); }
+
   footer {
     margin-top: 40px;
     font-family: var(--font-mono);
@@ -464,9 +470,10 @@ flowchart TD
       bucket[("state bucket<br/>4 prefixes, versioned")]
       vpc["VPC + subnet<br/>node · pod · service ranges"]
       vpn["HA VPN gateway + Cloud Router<br/>ASN 64514 · gated by enable_vpn"]
+      ar["Artifact Registry · 6 remote repos<br/>pull-through image caches — ADR-0010"]
     end
     subgraph ephem["torn down between sessions"]
-      gke["GKE regional cluster · private nodes<br/>Cloud NAT · workload identity"]
+      gke["GKE regional cluster · private nodes<br/>Cloud NAT (git-only) · workload identity"]
       argo["Argo CD 10.2.2<br/>root Application · manual sync"]
     end
   end
@@ -476,15 +483,16 @@ flowchart TD
   end
 
   bootstrap -->|"layers 0·1 — once"| vpc
-  bootstrap -->|"layers 2·3 — every session"| gke
+  bootstrap -->|"layers 2·3 —<br/>every session"| gke
   bootstrap -.->|"state, all layers"| bucket
   gke -.->|"VPC-native on"| vpc
+  gke -.->|"image pulls · Private Google Access"| ar
   argo -.->|"runs in"| gke
-  argo ==>|"pulls desired state — Terraform's job ends here"| config
+  argo ==>|"git pull —<br/>sole internet egress"| config
   vpn <-->|"2× IPsec tunnels · BGP"| unifi
 
   class bootstrap,config gitN
-  class bucket,vpc,vpn persistN
+  class bucket,vpc,vpn,ar persistN
   class gke,argo ephemN
   class unifi homeN
     </script>
@@ -505,8 +513,10 @@ flowchart TD
       state, then migrates itself into the bucket it creates.</p>
       <ul>
         <li><code>google_project</code> under the thecloudgeek.io org, billing linked</li>
-        <li>7 enabled APIs (compute, container, iam, …)</li>
+        <li>8 enabled APIs (compute, container, artifactregistry, …)</li>
         <li>GCS state bucket <code>&lt;project&gt;-tfstate</code>, versioned</li>
+        <li>6 Artifact Registry remote repos — the image plane (ADR-0010)</li>
+        <li><code>gke-nodes</code> service account — node identity + AR reader</li>
       </ul>
       <div class="layer-card__cost"><strong>~$0 idle</strong> · never touched after first apply</div>
     </div>
@@ -535,9 +545,9 @@ flowchart TD
       control plane, private nodes. Reads network facts from <code>1-network</code>'s remote state
       by name — so it can die and be reborn without touching the VPC.</p>
       <ul>
-        <li>GKE regional <code>us-central1</code> · private nodes + Cloud NAT</li>
+        <li>GKE regional <code>us-central1</code> · private nodes + Cloud NAT (git egress only)</li>
         <li>API endpoint locked to authorized networks · workload identity</li>
-        <li>Node pool: <code>e2-standard-4</code> on-demand, shielded, 1–2 per zone</li>
+        <li>Node pool: <code>e2-standard-4</code> on-demand, shielded, 1–2 per zone, runs as <code>gke-nodes</code> SA</li>
       </ul>
       <div class="layer-card__cost"><strong>~$0.50/hr while up</strong> (regional fee + nodes) · destroyed at session end</div>
     </div>
@@ -551,6 +561,7 @@ flowchart TD
       Authenticates with a short-lived token — no static credentials in state.</p>
       <ul>
         <li><code>helm_release</code> argo-cd 10.2.2 (Argo CD v3.4.6)</li>
+        <li>Images rerouted through AR remote caches — quay · ghcr · ecr-public</li>
         <li>Root Application via <code>extraObjects</code> → platform-config</li>
         <li>Auto-sync off until platform-config has real manifests</li>
       </ul>
@@ -612,15 +623,24 @@ flowchart TD
     <strong>C-02</strong> ("teardown/rebuild is cheap enough to run between sessions").
   </div>
 
-  <div class="callout callout--manual animate" style="--i:13">
+  <div class="callout callout--persist animate" style="--i:13">
+    <strong>One pinhole out.</strong> Every image the cluster runs is pulled through Artifact
+    Registry remote repositories — pull-through caches of six upstreams (Docker Hub, quay.io,
+    ghcr.io, ECR Public, registry.k8s.io, xpkg.upbound.io) — over Private Google Access, which
+    never leaves Google's network. The only traffic that touches the internet is Argo CD's git
+    pull to GitHub through Cloud NAT. That posture is <strong>ADR-0010</strong> and claim
+    <strong>C-23</strong>; M3's FQDN egress policy formalizes the pinhole it leaves.
+  </div>
+
+  <div class="callout callout--manual animate" style="--i:14">
     <strong>Irreducibly manual</strong> — the full list, named as evidence: two browser logins
     (<code>gcloud auth login</code>, <code>gcloud auth application-default login</code>), the
     free-trial signup, and one <code>terraform init -migrate-state</code> after the state bucket
     exists. Everything else is code.
   </div>
 
-  <footer class="animate" style="--i:14">
-    zoom out: <a href="platform-factory-overall-architecture.html">overall Platform Factory architecture</a> · platform-bootstrap PR #1 · design seed: <a href="https://github.com/thecloudgeek/platform-factory">thecloudgeek/platform-factory</a> · updated 2026-08-06 (corp-real posture, ADR-0009)
+  <footer class="animate" style="--i:15">
+    zoom out: <a href="platform-factory-overall-architecture.html">overall Platform Factory architecture</a> · platform-bootstrap PR #1 · design seed: <a href="https://github.com/thecloudgeek/platform-factory">thecloudgeek/platform-factory</a> · updated 2026-08-06 (corp-real posture ADR-0009 · AR image plane ADR-0010)
   </footer>
 
 </div>

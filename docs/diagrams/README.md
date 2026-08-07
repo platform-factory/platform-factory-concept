@@ -7,7 +7,7 @@ are zoomable (Ctrl/Cmd + wheel, drag to pan, ⛶ for full size).
 | Page | What it shows |
 |------|---------------|
 | [`platform-factory-overall-architecture.html`](platform-factory-overall-architecture.html) | The whole pattern: seven-repo topology, the flow of a change (PR → CODEOWNERS tier → merge → Argo CD → Kyverno → Crossplane → cloud), three approval tiers, the autonomy ladder, build-milestone status. |
-| [`gcp-platform-factory-architecture.html`](gcp-platform-factory-architecture.html) | The layer-0 deep dive: `platform-bootstrap`'s four Terraform layers, persist-vs-teardown boundaries, the session teardown rhythm (claim C-02), the HA VPN to a peer network, and where Terraform's job ends (claim C-01). |
+| [`gcp-platform-factory-architecture.html`](gcp-platform-factory-architecture.html) | The layer-0 deep dive: `platform-bootstrap`'s four Terraform layers, persist-vs-teardown boundaries, the session teardown rhythm (claim C-02), the Artifact Registry image plane and its single egress pinhole (ADR-0010, claim C-23), the HA VPN to a peer network, and where Terraform's job ends (claim C-01). |
 
 The two pages cross-link: the overall page is *what the factory is*; the
 layer-0 page is *the floor it stands on*. Diagrams are point-in-time snapshots

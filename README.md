@@ -67,7 +67,10 @@ policy (not review meetings) enforces the guardrails on the way in:
 
 The floor it stands on — `platform-bootstrap`'s Terraform layers, split by
 lifecycle so the expensive parts are torn down between working sessions and
-the network (and its VPN to other networks) persists:
+the network (and its VPN to other networks) persists. Every image the cluster
+runs arrives through Artifact Registry pull-through caches on Google's own
+network; the only traffic that touches the internet is Argo CD's git pull
+(ADR-0010):
 
 ![Terraform layer-0 GCP architecture](docs/diagrams/gcp-layer0-architecture.png)
 

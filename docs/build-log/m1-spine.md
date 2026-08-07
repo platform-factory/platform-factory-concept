@@ -15,12 +15,19 @@
   `platform` and `security` exist; `edge-config`'s CODEOWNERS routes
   `/external/` to `@platform-factory/security` — the approval boundary in
   file form, present from the first commit.
-- **Terraform layer 0 (Aug 1, in review):** `platform-bootstrap` PR authored
-  as three independently-applied layers — `0-foundation` (project, billing
-  link, APIs, state bucket), `1-cluster` (VPC, zonal GKE, workload identity),
-  `2-argocd` (Argo CD + root Application). Split chosen so teardown between
-  working sessions destroys only the cluster layers; the foundation persists
-  at ~zero cost (this is the shape of the C-02 test).
+- **Terraform layer 0 (Aug 1–6, in review as PR #1):** `platform-bootstrap`
+  authored as four independently-applied layers, split by lifecycle —
+  `0-foundation` (project under the org, billing link, 8 APIs, state
+  bucket, 6 Artifact Registry remote repos, dedicated `gke-nodes` service
+  account), `1-network` (custom VPC, subnet + secondary ranges, gated HA
+  VPN pair), `2-cluster` (regional private-node GKE, Cloud NAT,
+  authorized-networks endpoint), `3-argocd` (Argo CD 10.2.2 via Helm +
+  root Application through `extraObjects`, images rerouted through the AR
+  caches). The boundary rule: **identity and reachability persist; compute
+  is disposable** — teardown between sessions destroys only layers 2–3
+  (this is the shape of the C-02 test, now with the corporate-shaped bill
+  per ADR-0009). Seven review-hardened commits; nothing applied yet —
+  apply waits on human review of the PR.
 
 ## Data
 

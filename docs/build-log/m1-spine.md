@@ -35,6 +35,28 @@
   fully via `gh` CLI; zero cloud cost.
 - Build runs on a GCP Free Trial billing account ($300 / 90 days) under a
   fresh identity — trial window comfortably covers the M1–M4 timeline.
+- **First apply (Aug 6, after human review of PR #1):** `0-foundation`
+  applied clean on the first attempt — all 19 resources, including the six
+  Artifact Registry remote repos. Notably the `xpkg.upbound.io` remote
+  (the one flagged lower-confidence in `registry.tf`) was accepted by the
+  AR API at create time; whether it actually proxies pulls is still the
+  M2 check. Local→GCS state migration worked as designed. `1-network`
+  applied clean immediately after (3 resources; VPN gated off).
+- **First cluster apply hit a GCE stockout (Aug 6→7).** GKE's automatic
+  zone selection for the regional cluster included `us-central1-f`, which
+  had no `e2-standard-4` capacity; after 35 minutes the cluster landed in
+  ERROR with 3 of 4 zones' nodes running. Fix required zero code change:
+  the `node_locations` variable (already in the design as an override)
+  pinned zones a/b/c via gitignored tfvars, and `terraform apply` with
+  the tainted cluster replaced it cleanly. Two general notes: capacity
+  stockouts are a fact of life even in a top-3 region on a mainstream
+  machine type, and the "parameterize the escape hatch you hope not to
+  need" habit is what kept this a tfvars edit instead of a PR.
+- **The two browser logins recur per session, not once.** The Workspace
+  org's default reauthentication policy expired both the CLI credential
+  and ADC overnight (`invalid_rapt`). C-01's "irreducibly manual" list is
+  therefore a per-session cost, not a one-time bootstrap cost — worth
+  stating precisely when grading C-01.
 
 ## Surprises (running list — raw material for grading and the next ADR)
 
@@ -95,6 +117,20 @@
    `gcloud auth application-default login`), free-trial signup, and one
    `terraform init -migrate-state` after the state bucket exists. Everything
    else is code.
+
+7. **A from-nothing runbook step can become a hazard the moment the
+   bootstrap succeeds.** `0-foundation` shipped with its GCS backend
+   commented out — required for genesis, since the backend's bucket is
+   created by the very layer it serves. But post-genesis that same state
+   is a trap: a fresh clone running `terraform init` lands silently on
+   empty local state, and its next plan proposes re-creating all of live
+   foundation. Caught during the first real bootstrap, minutes after the
+   apply; fixed by committing the backend enabled and inverting the
+   runbook (commenting it out becomes the documented genesis-only
+   exception). General form, worth carrying into the pattern docs:
+   **bootstrap instructions have a half-life — the correct default flips
+   from "assume nothing exists" to "assume everything exists" after
+   exactly one successful run.**
 
 ## Research verified
 

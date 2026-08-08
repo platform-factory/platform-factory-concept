@@ -562,7 +562,7 @@ flowchart TD
       <ul>
         <li><code>helm_release</code> argo-cd 10.2.2 (Argo CD v3.4.6)</li>
         <li>Images rerouted through AR remote caches — quay · ghcr · ecr-public</li>
-        <li>Root Application via <code>extraObjects</code> → platform-config</li>
+        <li>Root Application via its own <code>root-app</code> release → platform-config</li>
         <li>Auto-sync off until platform-config has real manifests</li>
       </ul>
       <div class="layer-card__cost"><strong>Free</strong> · rides on 2-cluster, dies with it</div>

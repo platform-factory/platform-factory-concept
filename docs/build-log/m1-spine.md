@@ -22,8 +22,9 @@
   account), `1-network` (custom VPC, subnet + secondary ranges, gated HA
   VPN pair), `2-cluster` (regional private-node GKE, Cloud NAT,
   authorized-networks endpoint), `3-argocd` (Argo CD 10.2.2 via Helm +
-  root Application through `extraObjects`, images rerouted through the AR
-  caches). The boundary rule: **identity and reachability persist; compute
+  root Application as its own second `root-app` release — corrected
+  mid-build from the `extraObjects` design, see surprise 8 — images
+  rerouted through the AR caches). The boundary rule: **identity and reachability persist; compute
   is disposable** — teardown between sessions destroys only layers 2–3
   (this is the shape of the C-02 test, now with the corporate-shaped bill
   per ADR-0009). Seven review-hardened commits; nothing applied yet —
@@ -57,6 +58,17 @@
   and ADC overnight (`invalid_rapt`). C-01's "irreducibly manual" list is
   therefore a per-session cost, not a one-time bootstrap cost — worth
   stating precisely when grading C-01.
+- **Spine complete (Aug 7).** Cluster replacement (destroy ERROR cluster
+  + regional recreate + node pool, zones pinned a/b/c): ~29 min
+  end-to-end. `3-argocd`: argo-cd release live in 84s, root-app release
+  in 3s; all pods Running; `root` Application Synced/Healthy against
+  platform-config. **First live C-23 evidence:** every image on the
+  cluster arrived through the Artifact Registry remotes — quay
+  (argocd v3.4.6), ghcr (dex v2.45.1), and ECR Public (redis
+  8.2.3-alpine) paths all resolve to
+  `us-central1-docker.pkg.dev/platform-factory-ref/...` — zero direct
+  internet image pulls on the private-node cluster, three distinct
+  upstreams proxied.
 
 ## Surprises (running list — raw material for grading and the next ADR)
 
@@ -131,6 +143,21 @@
    **bootstrap instructions have a half-life — the correct default flips
    from "assume nothing exists" to "assume everything exists" after
    exactly one successful run.**
+8. **The researched workaround had its own apply-only failure mode — the
+   evidence hierarchy is validate < plan < apply, and only apply is
+   real.** The `extraObjects` design for the root Application was itself
+   the fix for a verified plan-time wall (`kubernetes_manifest` can't
+   bootstrap CRD-typed objects), and it validated and planned clean — then
+   failed on the first real apply, because its premise (Helm installs a
+   chart's `crds/` directory before templates) doesn't hold for the
+   argo-cd chart, which *templates* its CRDs; Helm validates every
+   rendered object against the cluster before applying any of them.
+   Fixed as a second Helm release of a tiny in-repo `root-app` chart,
+   validated at its own install time (platform-bootstrap PR #3, verified
+   live). The durable rule: **a CRD-typed object never belongs in the
+   same lifecycle step as the thing that defines its type** — the same
+   boundary, one step earlier, that pushes Crossplane XRs into GitOps
+   instead of Terraform (C-01).
 
 ## Research verified
 
@@ -187,6 +214,17 @@
   CRDs. Relevant beyond M1: any Terraform-side creation of Crossplane XRs
   would hit the same wall — one more reason claims/XRs belong in GitOps, not
   Terraform (supports C-01's boundary).
+  **Apply-time correction (2026-08-07): the second half of this entry was
+  wrong.** The `kubernetes_manifest` limitation is real, but the
+  `extraObjects` workaround fails too, one step later: the argo-cd chart
+  templates its CRDs rather than shipping them in Helm's special `crds/`
+  directory, and Helm validates all rendered objects against the cluster
+  API before applying any — so the same release can't carry both the CRD
+  and an instance of it. Working fix: the root Application as its own
+  second Helm release (in-repo `root-app` chart, `depends_on` the argo-cd
+  release), verified live. Kept uncorrected above deliberately — this
+  entry carried a [C] tag and still broke, which is exactly the
+  validate-vs-apply evidence gap (surprise 8) this log exists to record.
 
 ## Claims graded
 

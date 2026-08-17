@@ -86,6 +86,27 @@
   logs stay GitHub-only across the same interval. Recorded here rather than
   held back because the ledger of *what the evidence does not yet cover* is
   the part surprise 8 says gets skipped.
+- **C-23 conclusive: forced pull, zero registry egress (Aug 13).** The gap
+  named in the entry above is now closed. A throwaway pod pulled
+  `busybox:1.36` through the `docker-hub` Artifact Registry remote —
+  chosen precisely because `registry.tf`'s own comment records that
+  nothing this repo installs pulls from it, so neither the node nor the
+  remote had ever touched that path — with `imagePullPolicy: Always` to
+  force a registry round-trip rather than a cache hit.
+  The pull was real, not elided: kubelet reported **2.909s and 2,217,006
+  bytes**, and the container status resolved to a `pkg.dev` digest
+  (`us-central1-docker.pkg.dev/platform-factory-ref/docker-hub/library/busybox@sha256:73aaf090…`).
+  Across the entire window, Cloud NAT logged **exactly one connection**:
+  `140.82.113.3:443` — `lb-140-82-113-3-iad.github.com`, `OrgName: GitHub,
+  Inc.` Zero connections to Docker Hub or any other registry.
+  This is the strong form of the claim, and it demonstrates the mechanism
+  rather than just the outcome: because this was the `docker-hub` remote's
+  first ever use, Artifact Registry itself had to fetch the layers from
+  Docker Hub upstream — and that fetch generated no node-side egress,
+  because it happens on Google's side of the boundary. A private-node
+  cluster with no internet route to any registry pulled a public image
+  successfully. Four upstreams now proxied in practice (quay, ghcr,
+  ECR Public, Docker Hub). C-23 is ready to grade at milestone close.
 - **Operator IP churn is a recurring manual intervention (Aug 13).** The
   residential IPv4 in `authorized_networks` turned over
   ([redacted-residential-ip-1] → [redacted-residential-ip-2]) and the API server became unreachable.

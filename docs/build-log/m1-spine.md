@@ -124,6 +124,21 @@
   expiries don't coincide and where fixing one gives no signal about the
   other.
 
+- **C-02 first scripted cycle (Aug 18).** `scripts/cycle.sh cycle 1`, the
+  first end-to-end run of the harness. Down: `3-argocd` 65s, `2-cluster`
+  486s, **total 9m13**. Up, after the failure below was fixed: `2-cluster`
+  753s, `3-argocd` 87s, verify 12s — **~14m12 if it had run clean**. The
+  `2-cluster` rebuild at 12m33 is the first clean baseline; the ~29 min
+  recorded on Aug 7 included destroying a cluster stuck in ERROR.
+  **Manual interventions: 1** (the IP fix in surprise 12; a second stumble,
+  a shell left in the wrong directory, was operator error rather than a
+  property of the system). C-02's target is zero, so the first cycle does
+  not meet it.
+  The verify step passed in **12 seconds** — the root Application reached
+  Synced/Healthy with nobody clicking Sync, which is surprise 10's flip
+  working as intended and the first evidence that the rebuild can finish
+  unattended at all.
+
 ## Surprises (running list — raw material for grading and the next ADR)
 
 1. **The design said "a GitHub org, because the topology is the point" — and
@@ -276,6 +291,37 @@
     corp-real posture, which this quietly violated — a corporate cluster
     with no logs is not corp-real, and the posture checklist should name
     observability alongside private nodes and authorized networks.
+12. **A "successful" teardown that tore nothing down — the Helm provider
+    treats an unreachable cluster as an absent release.** The first
+    `cycle.sh` run destroyed `3-argocd` in 65s and reported
+    `Destroy complete! Resources: 0 destroyed`, exit 0. What actually
+    happened: the operator's residential IP had cycled back to a
+    previously-held address ([redacted-residential-ip-1]), so the workstation was outside
+    `authorized_networks` and the kubernetes/helm providers could not reach
+    the API server. Rather than failing, the provider refreshed both
+    `helm_release` resources, concluded they no longer existed, and dropped
+    them from state — leaving a plan containing nothing but output changes,
+    annotated with Terraform's own cheerful "without changing any real
+    infrastructure."
+    It caused no damage here only by luck of ordering: `2-cluster`'s destroy
+    removed the whole cluster eight minutes later. **A `3-argocd`-only
+    teardown would have left Argo CD running while deleting Terraform's
+    record that it exists** — state and world silently diverging, in the
+    direction where Terraform believes less exists than actually does.
+    Two lessons. The narrow one: unreachable is not absent, and any layer
+    whose providers authenticate *through* a resource in another layer can
+    fail this way — `terraform destroy` succeeding is not evidence anything
+    was destroyed. The broad one belongs with surprise 8's evidence
+    hierarchy: **exit 0 is not a result.** The same failure mode also hid a
+    diagnosis in this session — an earlier `terraform plan` on this layer
+    "succeeded" for exactly the same reason, and was misread as proof the
+    cluster was reachable.
+    Third occurrence of the dynamic-IP problem in ten days, second to block
+    work outright. The structural fix is not tfvars discipline but
+    `1-network`'s VPN (`enable_vpn`, still false): a corp environment
+    authorizes a stable office/VPN egress CIDR, and pinning a dynamic
+    residential /32 is an artifact of building from home without the tunnel
+    ADR-0009's posture already calls for.
 
 ## Research verified
 

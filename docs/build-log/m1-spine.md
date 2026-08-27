@@ -109,7 +109,7 @@
   ECR Public, Docker Hub). C-23 is ready to grade at milestone close.
 - **Operator IP churn is a recurring manual intervention (Aug 13).** The
   residential IPv4 in `authorized_networks` turned over
-  ([redacted-residential-ip-1] → [redacted-residential-ip-2]) and the API server became unreachable.
+  (one residential address to another; the specific values are redacted — this repo is public and they geolocate) and the API server became unreachable.
   Failure mode is a `dial tcp ... i/o timeout`, not an authz error — GKE
   drops unauthorized source IPs rather than refusing them, so it presents as
   a network hang with no hint at the cause. Cost: one tfvars edit plus a
@@ -138,6 +138,84 @@
   Synced/Healthy with nobody clicking Sync, which is surprise 10's flip
   working as intended and the first evidence that the rebuild can finish
   unattended at all.
+
+- **Control-plane access moved off the IP allowlist (Aug 20).** Three
+  applies, deliberately sequenced so a failure could not lock the operator
+  out. (1) `dns_endpoint_config.allow_external_traffic = false -> true` —
+  in-place, nodes untouched; the DNS endpoint already existed, only external
+  traffic was off. (2) `3-argocd`'s kubernetes/helm providers repointed from
+  `cluster_endpoint` to the new `cluster_dns_endpoint`, dropping
+  `cluster_ca_certificate` because `*.gke.goog` presents a publicly trusted
+  certificate rather than the cluster's own CA. (3)
+  `ip_endpoints_config.enabled = true -> false` plus deletion of
+  `master_authorized_networks_config` and the `authorized_networks` variable.
+  Evidence at each stage: the FQDN resolves through public DNS (`dig @8.8.8.8`
+  -> `216.239.32.27`, a Google address — it is a public name, not an internal
+  one); `kubectl get nodes` returned three Ready nodes over it; `3-argocd`
+  planned `No changes` while refreshing **both** `helm_release` resources,
+  which is the check that matters after surprise 12 — a plan proposing to
+  *create* argo-cd would have meant the provider silently could not see the
+  cluster. All three still held after the IP endpoint was disabled, which is
+  what makes it conclusive rather than suggestive: the allowlist was never
+  carrying that traffic. `2-cluster/terraform.tfvars` is now down to
+  `node_locations` and contains no address at all. **The recurring failure
+  from surprises 12 and the Aug 13 entry is deleted, not mitigated.**
+
+- **Credential expiry, third direction (Aug 20).** Extends the two earlier
+  entries. Terraform failed on ADC (`invalid_rapt`); after
+  `gcloud auth application-default login` fixed that, `gcloud` itself failed
+  separately with `Reauthentication failed`; and after `gcloud auth login`
+  fixed *that*, the CLI came back pointed at a different active account and
+  project than the cluster lives in, producing a 403 on
+  `container.clusters.get` that reads like a permissions problem and is
+  actually a context problem. Three distinct failures, three different error
+  surfaces, none of which indicates anything about the other two. A `cycle.sh`
+  preflight that checks only the credential that broke last time will keep
+  being surprised.
+
+- **Jump box, and Cloud NAT moved to the persist layer (Aug 20).**
+  `1-network` gained six resources: a dedicated service account, an
+  IAP-only SSH firewall rule, an e2-micro jump box with no external IP, and
+  Cloud NAT relocated out of `2-cluster`. Ordering was forced — two NAT
+  gateways cannot cover the same subnet ranges, so `2-cluster` had to destroy
+  its gateway (`0 to add, 0 to change, 2 to destroy`) before `1-network` could
+  create one. Argo CD's git traffic was the only casualty of the gap and it
+  reconnected on its own; the root Application was `Synced/Healthy` on the
+  next check.
+  Verified over IAP with no public IP anywhere on the box:
+  `gcloud compute ssh --tunnel-through-iap` returned a shell, `tailscale
+  1.102.3` was installed, `net.ipv4.ip_forward = 1` was live and persisted to
+  `/etc/sysctl.d/`, and `tailscale status` reported `Logged out` — ready for
+  the one-time join. That apt reached the Debian repos at all is the
+  independent proof the relocated NAT works.
+  One latent bug found and fixed rather than left: nothing declared that the
+  VM needs NAT, so Terraform created them concurrently and the startup
+  script's one network-dependent step won the race by seconds. Now
+  `depends_on` the gateway, with a retry loop around the install so a cold NAT
+  degrades into a delay instead of a jump box that silently has no Tailscale.
+
+- **Tailnet up; subnet routing measured, not assumed (Aug 22).** The jump box
+  joined the tailnet and advertised all three ranges; routes approved in the
+  admin console. Two nodes on the tailnet — the operator's laptop
+  (`100.126.144.78`) and the jump box (`100.91.151.61`). Reachability tested
+  from the laptop, over the tailnet, to private VPC addresses with no VPN, no
+  public IP, and no allowlist anywhere in the path:
+
+  | Advertised range | Target | Result |
+  | --- | --- | --- |
+  | `10.10.0.0/20` (nodes) | `10.10.0.24` jump box | reachable, ~52 ms |
+  | `10.10.0.0/20` (nodes) | `10.10.0.21` GKE node | reachable, ~52 ms |
+  | `10.20.0.0/16` (pods) | `10.20.1.6` Argo CD pod | reachable, ~55 ms |
+  | `10.30.0.0/20` (Services) | `10.30.4.27` argocd-server | **unreachable** |
+
+  Two of three ranges do what the design intended. The third never could —
+  see surprise 16.
+
+  Tailnet Lock was evaluated and deferred rather than enabled (ADR-0011): it
+  needs at least two signing nodes, this tailnet has exactly two, one of them
+  is a VM Terraform can replace, and initialization emits ten
+  once-only disablement secrets whose total loss is unrecoverable. Real
+  lockout risk against a threat model this build does not have.
 
 ## Surprises (running list — raw material for grading and the next ADR)
 
@@ -296,7 +374,7 @@
     `cycle.sh` run destroyed `3-argocd` in 65s and reported
     `Destroy complete! Resources: 0 destroyed`, exit 0. What actually
     happened: the operator's residential IP had cycled back to a
-    previously-held address ([redacted-residential-ip-1]), so the workstation was outside
+    previously-held address, so the workstation was outside
     `authorized_networks` and the kubernetes/helm providers could not reach
     the API server. Rather than failing, the provider refreshed both
     `helm_release` resources, concluded they no longer existed, and dropped
@@ -322,6 +400,100 @@
     authorizes a stable office/VPN egress CIDR, and pinning a dynamic
     residential /32 is an artifact of building from home without the tunnel
     ADR-0009's posture already calls for.
+    **Superseded on Aug 20 (ADR-0011).** The fix named here — finish the VPN —
+    was wrong, and wrong in a way the build log had already recorded three
+    times without anyone checking the premise. See surprise 13.
+
+13. **The fix this log named three times could never have worked.** Aug 13,
+    Aug 18, and the closing note on surprise 12 all concluded the structural
+    answer to residential IP churn was `1-network`'s VPN. Checking the primary
+    source before building it: **Cloud VPN requires a static external IP on
+    the peer gateway.** A dynamic residential lease cannot supply one, so the
+    VPN does not solve the dynamic-IP problem — it inherits it, and enlarges
+    the blast radius, because a changed address breaks the
+    `external_vpn_gateway` resource and the entire private path instead of one
+    allowlist line. HA VPN also requires BGP on the peer device, and an idle
+    tunnel meters at ~$35–40/month.
+    What made the error durable is that the conclusion was *plausible* and
+    kept getting reinforced by recurrence: each new outage felt like more
+    evidence for the remedy, when it was only more evidence for the problem.
+    Three log entries asserted the fix; none tested it. This is surprise 8's
+    evidence hierarchy pointed at the log's own reasoning rather than at a
+    command's exit code — **a remedy repeated is not a remedy verified.**
+    The deeper miss was a requirements error underneath the technical one. The
+    stated need is for *users* to reach internal apps, SSH, and databases; a
+    site-to-site VPN serves *locations*, and would have granted access to
+    exactly one building while every remote developer still needed something
+    else. The design had been carrying an unexamined 2010s assumption —
+    that reachability is a network property — since ADR-0009.
+
+14. **Disabling the IP endpoint leaves a live-looking address behind.** After
+    `ip_endpoints_config.enabled = false`, the provider's `endpoint` attribute
+    still reports the old control-plane IP (`34.55.89.82`), and `terraform
+    output` still hands it to any consumer that asks. Nothing answers there:
+    `curl` to it times out (exit 28) rather than being refused — the same
+    silent-drop behaviour the authorized-network allowlist produced, and the
+    same reason the Aug 13 outage read as a network hang instead of a config
+    fact. A stale value that *looks* current is worse than an absent one,
+    because it sends the next reader debugging connectivity for a problem that
+    is really a configuration decision. The `cluster_endpoint` output was
+    removed rather than documented in place. Same family as surprise 12:
+    the dangerous failures here are the ones that return a confident,
+    well-formed, wrong answer.
+
+15. **Closing one door re-armed another, and the config still said "open."**
+    Disabling the IP endpoints did not just change the field it was set on —
+    GKE also flipped `private_cluster_config.enable_private_endpoint` from
+    false to true, because with no public IP endpoint left that is what the
+    older field now means. The Terraform config still carried the original
+    `false`, so the very next plan read `enable_private_endpoint = true ->
+    false`: an innocuous-looking one-line diff whose apply would have
+    **reopened the public IP endpoint** and silently undone the whole posture
+    change made an hour earlier.
+    It surfaced only because an unrelated change — moving Cloud NAT to
+    `1-network` — forced a plan on that layer and the diff was read rather
+    than skimmed. Nothing about the original apply hinted the field existed;
+    the security control and the field that drifted are in different blocks of
+    the resource.
+    The general shape is worth naming: **a hardening change can leave the
+    config asserting the pre-hardened value for a neighbouring field, so the
+    next routine apply quietly reverts it.** The window between the two is
+    invisible, because the drift lives in the provider's view of the world
+    rather than in anything the operator wrote. Related to surprises 12 and
+    14 — all three are cases where the tooling gave a confident, well-formed
+    answer that pointed the wrong way — but this one is worse than those,
+    because the wrong answer would have been applied on purpose by someone
+    reading a clean plan.
+
+16. **A range can be reserved, advertised, accepted — and still be
+    unreachable by construction.** `local.private_ranges` advertises the
+    subnet primary range plus both GKE secondary ranges, and its comment
+    promised "pod and Service IPs are reachable from the peer network too,
+    not just node IPs." Measured over the tailnet: nodes reachable, pods
+    reachable, **Service ClusterIPs not**. Nothing is misconfigured. ClusterIPs
+    are virtual — kube-proxy rules on each node translate them, and they are
+    never real addresses on the VPC network — so routing cannot reach them
+    from outside no matter what is advertised.
+    What makes this worth recording is how convincing the wrong version
+    looked from the GCP side. The Services range is a real
+    `secondary_ip_range` on a real subnet, it appears in the VPC IP plan
+    alongside the pods range that *does* work, and both are configured
+    identically in `ip_allocation_policy`. Nothing at the Terraform or GCP
+    layer distinguishes the routable range from the one that only reserves
+    addresses; the difference lives entirely in Kubernetes' implementation of
+    Services, one abstraction above where the route is written.
+    The comment had been wrong since it was written for the VPN, and survived
+    because the VPN was never built — the same mechanism as surprise 13, where
+    an assertion persisted precisely because nothing exercised it. Two of
+    these in one milestone is a pattern rather than a coincidence: **this
+    codebase's comments have been carrying untested capability claims, and
+    they read exactly like tested ones.** The claims register is graded
+    against evidence; comments are not, and that gap is where both errors
+    lived.
+    Reaching a Service by name from the tailnet is what the in-cluster
+    Tailscale operator's Ingress is for — which is the concrete job for the
+    operator that ADR-0011 kept as "additive, not a replacement" after moving
+    the subnet router out to the jump box.
 
 ## Research verified
 
@@ -437,6 +609,63 @@
   release), verified live. Kept uncorrected above deliberately — this
   entry carried a [C] tag and still broke, which is exactly the
   validate-vs-apply evidence gap (surprise 8) this log exists to record.
+
+- **Cloud VPN requires a static peer IP — the premise check that killed the
+  VPN plan (verified 2026-08-19** against Google's Cloud VPN overview). The
+  documentation is unambiguous: the peer VPN gateway must have a static
+  external, internet-routable IP address, and that address is required to
+  configure Cloud VPN at all. This log had asserted three times that the VPN
+  was the structural fix for residential IP churn; the assertion had never
+  been checked against the requirement. HA VPN additionally requires BGP on
+  the peer device. See surprise 13 — the interesting finding is not the
+  requirement, it is that repetition had been substituting for verification.
+
+- **GKE DNS-based control-plane endpoint (verified 2026-08-20** against
+  Google's "About network isolation in GKE"). Google states the best practice
+  directly: use only the DNS-based endpoint for control-plane access. It is a
+  unique immutable FQDN per cluster, resolves to an endpoint reachable from
+  any network that can reach Google Cloud APIs — on-premises and other clouds
+  included — and explicitly "eliminates the need for a bastion host or proxy
+  nodes." Authorization is IAM plus optional VPC Service Controls, not source
+  address. Terraform surface confirmed against the provider source
+  (`resource_container_cluster.go`, hashicorp/google v7.42):
+  `control_plane_endpoints_config` carries `dns_endpoint_config`
+  (`allow_external_traffic`, `enable_k8s_tokens_via_dns`,
+  `enable_k8s_certs_via_dns`) and `ip_endpoints_config.enabled`. gcloud
+  equivalent is `--enable-dns-access`.
+  Confirmed empirically rather than only on paper: the endpoint resolves via
+  public DNS (`dig @8.8.8.8` -> `216.239.32.27`). **It is a public name, not
+  an internal address** — a point worth stating plainly, because the natural
+  assumption is the opposite and the whole design depends on it being public.
+
+- **IAP TCP forwarding — evaluated, not adopted (verified 2026-08-20** against
+  Google's "Use IAP for TCP forwarding"). Forwards SSH, RDP and arbitrary TCP
+  to VMs with no external IP; ingress is opened only to `35.235.240.0/20`, and
+  authorization is `roles/iap.tunnelResourceAccessor`. Google's IAP-for-GKE
+  page states the positioning outright — it "enables you to control
+  resource-level access for employees instead of using a VPN" — and supports
+  the Gateway API on GKE 1.24+. Rejected for the user-access plane only
+  because IAP TCP forwarding targets Compute Engine instances rather than
+  managed services, so a private Cloud SQL instance needs a jump VM running
+  the Auth Proxy plus a tunnel to it: two hops where a subnet router gives
+  `psql -h 10.x.x.x`. Recorded because it remains the GCP-native answer if
+  ADR-0011's third-party dependency later proves unwelcome.
+
+- **Tailscale control-plane architecture (verified 2026-08-20** against
+  Tailscale's "How Tailscale works", subnet router, and Tailnet Lock docs).
+  The coordination server is "essentially, a shared drop box for public keys";
+  the control plane is hub-and-spoke but "carries virtually no traffic," and
+  private keys never leave their node. **It therefore cannot be moved inside
+  the VPC** — every node must reach it to exchange keys, so a private one is
+  a chicken-and-egg, and self-hosting means Headscale, which Tailscale's own
+  docs note "removes the availability guarantees and low maintenance
+  overhead" of the SaaS. What goes in the VPC is a subnet router; the docs
+  name this exact use case, "securely connect to cloud-managed services like
+  Amazon RDS or Google Cloud SQL without exposing them to the public
+  internet." The residual risk is that Tailscale's control plane can add
+  nodes to a tailnet; Tailnet Lock is the documented mitigation, and with it
+  "even if Tailscale were malicious or Tailscale infrastructure hacked,
+  attackers can't send or receive traffic in your tailnet."
 
 ## Claims graded
 

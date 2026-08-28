@@ -1,8 +1,14 @@
-# M1: Spine — in progress (started 2026-08-01)
+# M1: Spine — closed 2026-08-28 (started 2026-08-01)
 
-> **Status: IN PROGRESS.** This entry accumulates evidence in real time and is
-> finalized — claims graded — only when the milestone closes. Nothing below is
-> a grade yet.
+> **Status: CLOSED.** Claims graded at the bottom of this entry, per ADR-0008.
+> Everything above "Claims graded" was accumulated as evidence in real time
+> and is left as written — including the entries later proved wrong, which are
+> corrected in place rather than deleted (see surprises 8, 12 and 13 for why
+> that is deliberate).
+>
+> **Outcome: C-02, C-04 and C-23 HELD; C-01 and C-03 deferred to M2** because
+> neither claim's test can execute at M1 — a scheduling error in the register
+> itself, recorded rather than papered over.
 
 ## Built
 
@@ -216,6 +222,102 @@
   is a VM Terraform can replace, and initialization emits ten
   once-only disablement secrets whose total loss is unrecoverable. Real
   lockout risk against a threat model this build does not have.
+
+- **Layer 0 touched again, to let the paved road pull its own providers
+  (Aug 27).** Crossplane's package manager pulls with its own pod identity,
+  not the node's, so the `gke-nodes` grant did nothing for it and every
+  provider would have sat pull-denied. One additive binding in
+  `0-foundation/iam.tf` — `roles/artifactregistry.reader` to
+  `principal://…/subject/ns/crossplane-system/sa/crossplane`, the direct
+  Workload Identity form with no Google service account and no key. Plan was
+  `1 to add, 0 to change, 0 to destroy`; the project policy now lists exactly
+  two `artifactregistry.reader` members, the node SA and that principal.
+  Cheap to apply and worth reading twice for what it implies about C-01 —
+  see surprise 17.
+
+- **C-02 cycle 2: the first clean cycle, and C-04's test in the same run
+  (Aug 27–28).** Down (Aug 27 evening): `3-argocd` 55s, `2-cluster` 649s —
+  **11m48**. Up (Aug 28, after the grant above): `2-cluster` 755s,
+  `3-argocd` 119s, verify 173s — **17m32**. **Manual interventions: zero** —
+  the first cycle to meet C-02's target, and the first run of the harness
+  against a `platform-config` that isn't a stub.
+  `2-cluster` came in at 755s against cycle 1's 753s, so the cluster rebuild
+  is the stable part of the number and reproducible to within two seconds.
+  All of the growth is downstream of it: `3-argocd` 87s → 119s and verify
+  12s → 173s. Both are the cost of there finally being something to sync,
+  which is the honest way to read the total going up while the run got
+  cleaner.
+  The same run is C-04's test — **a fresh cluster reached all-synced from
+  empty with no manual ordering**: 3/3 Applications Synced/Healthy (`root`,
+  `crossplane` at wave 0, `crossplane-providers` at wave 1) with all six GCP
+  provider packages Installed and Healthy underneath. What it cost to get
+  there is recorded as surprise 18 rather than buried here: the register
+  predicted sync-wave friction the design doesn't acknowledge, and the
+  prediction was right.
+
+- **C-23 extended to the package plane, against a digest from 17 days
+  earlier (Aug 28).** The Aug 13 evidence covered kubelet pulls. Crossplane's
+  package manager is a different puller — its own pod, its own identity, its
+  own resolution path — so this is a genuinely new test of the same claim
+  rather than a rerun, and it passed.
+  Every image on the rebuilt cluster resolves to `*.pkg.dev`: Crossplane and
+  its rbac-manager (`ghcr-io/crossplane/crossplane:v2.3.5`, main *and* init
+  containers) and all six provider packages
+  (`ghcr-io/crossplane-contrib/provider-gcp-*:v3.0.0`).
+  The mechanism is recorded by the component doing it rather than inferred
+  from image strings: `ProviderRevision.status.resolvedImage` reads
+  `us-central1-docker.pkg.dev/platform-factory-ref/ghcr-io/crossplane-contrib/provider-gcp-storage:v3.0.0`,
+  and `status.appliedImageConfigRefs` names
+  `[{"name":"artifact-registry-mirror","reason":"RewriteImage"}]` — the
+  package manager stating which rule rewrote the pull. Note the `Provider`
+  resource still displays the canonical `xpkg.crossplane.io/...` package
+  name; the rewrite is visible only one level down, which is worth knowing
+  before someone reads `kubectl get providers` and concludes the mirror
+  isn't working.
+  And the artifact is provably the same artifact. Artifact Registry serves
+  `sha256:a2170b5c616869f0a241d8877813c5f193198c7c7fd66476db2313dca46cfdf5`
+  for `provider-gcp-storage:v3.0.0` — **byte-identical to the digest the
+  2026-08-11 direct probe of `xpkg.crossplane.io` returned.** Two paths,
+  seventeen days apart, same bytes; Crossplane names the revision from that
+  digest, which is why the pod is `provider-gcp-storage-a2170b5c6168-…`.
+  The egress side held across the entire rebuild. NAT translation logs for
+  04:12–04:25Z contain exactly two destinations — `140.82.114.3:443` and
+  `140.82.114.4:443`, reverse DNS `lb-140-82-114-{3,4}-iad.github.com`,
+  WHOIS `OrgName: GitHub, Inc.` **Zero connections to any registry** while a
+  fresh cluster pulled Crossplane, six provider packages, and a package
+  dependency for the first time. Five upstreams now proxied in practice
+  (quay, ghcr, ECR Public, Docker Hub, and the Crossplane package track via
+  ghcr).
+
+- **C-02 cycle 3: the target reproduced, and the cluster rebuild is a
+  constant (Aug 28).** Down: `3-argocd` 58s, `2-cluster` 535s — **9m57**.
+  Up: `2-cluster` 755s, `3-argocd` 115s, verify 162s — **17m18**. **Manual
+  interventions: zero**, a second time.
+  `2-cluster apply` came in at **755s in both cycle 2 and cycle 3** — the
+  same number to the second, and 753s in cycle 1. Three runs spread over ten
+  days agreeing within two seconds makes the regional-GKE rebuild the one
+  genuinely predictable quantity in this build, which is worth knowing
+  because it is also the dominant term: it is 73% of the up phase and every
+  other component is noise beside it. Teardown is the variable half (535s,
+  649s, 486s) — GKE's own drain behaviour, not anything this repo controls.
+
+- **C-03's live half, short of the hands-on half (Aug 28).** With the
+  providers Healthy on the rebuilt cluster, the doc-only kind check from
+  Aug 11 can be re-run against a real API server: **all eleven kinds the
+  Compositions need are Established CRDs, at both scopes** — cluster
+  (`*.gcp.upbound.io`) and namespaced (`*.gcp.m.upbound.io`) — covering
+  `DatabaseInstance`/`Database`/`User` (sql), `Bucket`/`BucketIAMMember`
+  (storage), `ServiceAccount`/`ProjectIAMMember`/`ServiceAccountIAMMember`
+  (cloudplatform), `RegistryRepository` (artifact), and
+  `RecordSet`/`ManagedZone` (dns). 45 GCP provider CRDs in total, of 147 on
+  the cluster.
+  This is stronger evidence than the primary-source check — the kinds are
+  installed and served, not merely present in a repo — and still not what
+  C-03's test asks for. "Hands-on create of each kind" means a Composition
+  materializing a real Cloud SQL instance and a real bucket, which needs the
+  M2 paved road. Recorded so the distinction survives to the grade: the
+  register's M1 assignment covers everything except the half that matters
+  most.
 
 ## Surprises (running list — raw material for grading and the next ADR)
 
@@ -495,6 +597,65 @@
     operator that ADR-0011 kept as "additive, not a replacement" after moving
     the subnet router out to the jump box.
 
+17. **"Workload identity" is a bootstrap item in the thesis and a recurring
+    one in practice — and the very first grant is the one that cannot be
+    delegated.** Bringing Crossplane up required a `0-foundation` apply on
+    2026-08-27: an `artifactregistry.reader` binding on Crossplane's own
+    Kubernetes service account, because the package manager pulls with its
+    pod identity rather than the node's, so the `gke-nodes` grant does
+    nothing for it.
+    This is *inside* C-01 as written — the thesis names "workload identity"
+    among the things Terraform bootstraps, so it is not a violation and
+    shouldn't be graded as one. What it isn't is one-time. The thesis's list
+    reads as a setup sequence performed once and then left alone; the actual
+    arrival order is that a WI grant appears whenever a new platform
+    component first needs a Google API — which is to say whenever
+    `platform-config` gains content. Layer 0 and the GitOps repo turn out to
+    be coupled on a schedule the design describes as sequential.
+    The sharp part is why this particular grant can't be moved. Crossplane
+    can manage IAM itself — `ProjectIAMMember` is in the C-03 kind list — so
+    the *next* component's binding genuinely could arrive as a PR against
+    `platform-config` rather than a terraform apply. Crossplane's own cannot,
+    because that binding is precisely what lets it pull the provider packages
+    that would do the granting. **The paved road can pave everything except
+    its own on-ramp.**
+    Worth carrying into C-01's grade as a named cost rather than an
+    exception: the boundary holds, but there is one structural crossing per
+    platform, plus one per component until Crossplane is running.
+
+18. **The sync-wave ordering the whole app-of-apps depends on is off by
+    default, and looks configured either way.** The register predicted
+    "CRD-race / sync-wave workarounds required (a known friction the design
+    doesn't currently acknowledge)" for C-04. It was right, and the specific
+    friction is nastier than a race.
+    Argo CD removed `Application` from its built-in health checks in 1.8. A
+    sync wave gates on the previous wave's *health* — so with no health check
+    for Applications, every child reports Healthy the instant it is created,
+    every wave's gate is already open, and all children sync at once. The
+    annotations are present, the ordering is expressed, and nothing enforces
+    it. The failure would then surface one level down as an unrelated-looking
+    error: the wave-1 `Provider` resources are Crossplane CRD types that do
+    not exist until the wave-0 Crossplane install is actually running.
+    Fixing it needed a Lua health check in `argocd-cm`
+    (`resource.customizations.health.argoproj.io_Application`) that reports a
+    child's own health up to its parent — and that had to live in
+    `3-argocd`, i.e. in Terraform, not in `platform-config`. The reason is
+    the same shape as surprise 8: **a setting that the sync order depends on
+    cannot itself arrive by sync.** Argo CD reads `argocd-cm` at startup, and
+    `platform-config` is the thing Argo CD syncs.
+    What C-04 actually cost, recorded so the claim isn't graded as free: two
+    Applications rather than one (waves 0 and 1), three waves inside the
+    providers directory (ImageConfig → `provider-family-gcp` → the five
+    service providers), `ServerSideApply=true` because Crossplane's CRDs
+    exceed the annotation size limit client-side apply uses, a vendored copy
+    of the Crossplane chart so the repo-server doesn't open a second egress
+    path to `charts.crossplane.io`, and the argocd-cm health check above.
+    Five workarounds, none of which the pattern doc mentions.
+    Same family as surprises 12, 14 and 15 — tooling returning a confident,
+    well-formed answer that points the wrong way — and the worst version of
+    it, because here the wrong answer is *silence*: correct-looking YAML that
+    orders nothing.
+
 ## Research verified
 
 - **[C] provider-upjet-gcp kind coverage — C-03's doc half (verified
@@ -669,4 +830,123 @@
 
 ## Claims graded
 
-None yet — grading happens at milestone close per ADR-0008.
+Graded 2026-08-28 at M1 close, per ADR-0008. Three of the five claims the
+register assigns to M1 are graded here; two are deferred, and the reason is
+the same in both cases and is itself a finding — see "Two claims the register
+mis-assigned" below.
+
+### C-02 — Tear-down/rebuild is cheap → **HELD**
+
+Three scripted cycles, the minimum the test asks for.
+
+| Cycle | Date | Down | Up | Manual interventions |
+|---|---|---|---|---|
+| 1 | Aug 18 | 9m13 | ~14m12 (clean-path; the run itself failed and was retried) | **1** |
+| 2 | Aug 27→28 | 11m48 | 17m32 | **0** |
+| 3 | Aug 28 | 9m57 | 17m18 | **0** |
+
+The target is zero and two of three runs met it. The one that didn't was
+cycle 1, whose intervention was the residential-IP allowlist (surprise 12) —
+a mechanism that has since been **deleted rather than worked around**
+(ADR-0011, the DNS-based endpoint). The configuration that produced the only
+failure no longer exists, which is why this grades HELD rather than ADJUSTED.
+
+Two honesty notes that belong in the grade, not under it:
+
+- **Only cycles 1 and 2 actually test "between sessions."** C-02's wording is
+  that the cluster can be destroyed *between sessions* and rebuilt. Cycle 3
+  ran back-to-back with cycle 2 on already-warm credentials, so it tests
+  reproducibility, not the session boundary — and the session boundary is
+  where this build's most frequent intervention lives (three separate
+  credential-expiry failure modes, none of which signals anything about the
+  other two). The evidence for the boundary property is two runs, one of
+  which failed on it.
+- **`2-cluster` is the whole number and it is a constant.** 753s / 755s /
+  755s across ten days. Down is the variable half and is GKE's drain
+  behaviour rather than anything this repo controls.
+
+**Open data point: actual monthly GCP spend.** The test asks for it and the
+build cannot produce it — no BigQuery billing export was configured, and the
+CLI exposes no cost surface without one. This is the **third** instance of
+surprise 9's pattern (a claim's test is a requirement on the build), after
+C-23's NAT logs and C-23's flow logs. Export was enabled 2026-08-28 into
+`thecloudgeek.billing` (US multi-region, so Google backfills the current and
+previous month — the M1 window is recoverable), but the export must be keyed
+to billing account `XXXXXX-XXXXXX-XXXXXX`, which is the one
+`platform-factory-ref` bills to; the pre-existing table in that dataset
+covers a different account. Grade stands on wall-clock and intervention
+count, which are the two numbers the target is stated in; the cost figure is
+a one-query follow-up, not a missing premise.
+
+### C-04 — One app-of-apps owns the cluster surface → **HELD, for the surface M1 built**
+
+Test: "fresh cluster reaches all-synced from empty with no manual ordering."
+Cycles 2 and 3 both did exactly that — 3/3 Applications Synced/Healthy
+(`root`, `crossplane` wave 0, `crossplane-providers` wave 1) in 173s and
+162s, from an empty cluster, with nobody clicking anything.
+
+**Scope, stated rather than implied:** the claim names Crossplane, Kyverno,
+ESO, external-dns, gateway, and the XRDs/Compositions. M1 built the first of
+those six. What is graded here is the *mechanism* — one app-of-apps, sync
+waves, sync status as the single truth — not the full surface, and the claim
+should be re-tested at M3 when the remaining addons land. A reader who takes
+"HELD" to mean the whole list has been demonstrated would be reading more
+than the evidence supports.
+
+The data the test asked for — "CRD-race / sync-wave workarounds required" —
+is **five**, detailed in surprise 18: two Applications instead of one, three
+waves inside the providers directory, `ServerSideApply=true`, a vendored
+Crossplane chart, and a Lua health check restored into `argocd-cm`. The
+register predicted this friction and flagged that the design doesn't
+acknowledge it. Both halves of that prediction were correct, and the last of
+the five is the one worth carrying forward: **the ordering mechanism the
+whole design depends on is off by default and looks configured either way.**
+
+### C-23 — Image plane on the Google-API path → **HELD**
+
+The strongest-evidenced claim in the milestone; graded on two independent
+tests of two different pullers.
+
+- **Kubelet (Aug 13).** A forced pull of `busybox:1.36` through a remote that
+  had never been used — 2.909s, 2,217,006 bytes, resolving to a `pkg.dev`
+  digest — while Cloud NAT logged exactly one connection, to GitHub. Because
+  it was that remote's first use, Artifact Registry itself fetched from
+  Docker Hub upstream, and that fetch produced no node-side egress.
+- **Crossplane's package manager (Aug 28).** A different pod, identity and
+  resolution path. Every image resolved to `*.pkg.dev`;
+  `status.appliedImageConfigRefs` recorded
+  `artifact-registry-mirror / RewriteImage`; the digest AR served for
+  `provider-gcp-storage:v3.0.0` was byte-identical to the Aug 11 upstream
+  probe; and NAT logs across the entire rebuild contained two destinations,
+  both GitHub.
+
+Five upstreams proxied in practice (quay, ghcr, ECR Public, Docker Hub, the
+Crossplane package track via ghcr). No image needed an exception. The one
+remote that looked riskiest — `xpkg-upbound-io`, the only `[I]`-tagged entry
+in `registry.tf` — turned out to be **unnecessary rather than unproven**, and
+is still deployed; deleting it is open cleanup.
+
+### Two claims the register mis-assigned to M1
+
+Both are deferred, both for the same structural reason, and the pattern is
+the finding: **a claim's milestone assignment is a guess about when its test
+can run, and that guess can be wrong in a way nobody notices until the
+milestone tries to close.** Same family as surprise 9, one level up — surprise
+9 is a test the build can't run; this is a test the *milestone* can't run.
+
+- **C-01 — Terraform ends at layer 0 → stays UNTESTED.** Its test is "count
+  `terraform apply` runs **after M1 completes**." At M1 close the measurement
+  window has not opened. There is no honest way to grade this now, and no ADR
+  to hang an ADJUSTED on. What M1 did produce is surprise 17, which predicts
+  the shape of the eventual grade: the boundary holds, but "workload
+  identity" is a recurring bootstrap cost rather than a one-time one, and
+  Crossplane's own Artifact Registry grant is the one crossing that
+  structurally cannot be delegated to the paved road. Grade at M2 close.
+- **C-03 — provider-upjet-gcp kind coverage → stays UNTESTED.** Its test has
+  two halves; only the first is M1-shaped. The primary-source check passed
+  (Aug 11) and has now been strengthened on a live cluster — all eleven kinds
+  Established at both scopes, 45 provider CRDs served. The second half,
+  "hands-on create of each kind," requires Compositions that materialize real
+  Cloud SQL instances and buckets, which is M2 work by the register's own
+  milestone table. Grade at M2 close, when the remaining half can actually
+  run.

@@ -12,10 +12,10 @@ Grades: **UNTESTED** → **HELD** | **ADJUSTED** (superseding ADR linked) |
 
 | ID | Claim (short) | Milestone | Grade |
 |----|---------------|-----------|-------|
-| C-01 | Terraform ends at layer 0 | M1 | UNTESTED |
-| C-02 | Tear-down/rebuild is cheap enough to run between sessions | M1 | UNTESTED |
-| C-03 | provider-upjet-gcp covers the kinds the Compositions need | M1 | UNTESTED |
-| C-04 | One Argo app-of-apps can own the whole cluster surface | M1 | UNTESTED |
+| C-01 | Terraform ends at layer 0 | M1 | UNTESTED — deferred to M2 (2026-08-28) |
+| C-02 | Tear-down/rebuild is cheap enough to run between sessions | M1 | **HELD** (2026-08-28) |
+| C-03 | provider-upjet-gcp covers the kinds the Compositions need | M1 | UNTESTED — deferred to M2 (2026-08-28) |
+| C-04 | One Argo app-of-apps can own the whole cluster surface | M1 | **HELD** for the M1 surface (2026-08-28) |
 | C-05 | One YAML per tenant materializes the full tenant surface | M2 | UNTESTED |
 | C-06 | Ownership moves with a YAML edit, no re-plumbing | M2 | UNTESTED |
 | C-07 | Database claims: guardrails replace review | M2 | UNTESTED |
@@ -34,7 +34,7 @@ Grades: **UNTESTED** → **HELD** | **ADJUSTED** (superseding ADR linked) |
 | C-20 | Gates can be three-outcome in practice | M4 | UNTESTED |
 | C-21 | Agents operate PR-only with their own identity, fully attributable | M4 | UNTESTED |
 | C-22 | Knowledge freshness and the question bank work as CI | M4 | UNTESTED |
-| C-23 | Image pulls ride the Google-API path; internet egress reduces to git (added 2026-08-06) | M1 | UNTESTED |
+| C-23 | Image pulls ride the Google-API path; internet egress reduces to git (added 2026-08-06) | M1 | **HELD** (2026-08-28) |
 
 ## M1 — Spine
 
@@ -75,6 +75,32 @@ Grades: **UNTESTED** → **HELD** | **ADJUSTED** (superseding ADR linked) |
   Google-API path. **Data:** the list of upstream registries proxied; any
   image that could not be served through a remote repo and what was done
   about it.
+
+### M1 grading note (2026-08-28)
+
+Graded at M1 close; full evidence and reasoning in
+[`m1-spine.md`](m1-spine.md) under "Claims graded".
+
+**HELD:** C-02 (3 scripted cycles; 0 manual interventions on cycles 2 and 3,
+the single cycle-1 intervention caused by a mechanism ADR-0011 has since
+deleted — actual monthly spend still open, see the entry), C-04 (all-synced
+from empty, twice, at the cost of five sync-wave workarounds; graded for the
+Crossplane surface M1 built, not the full addon list the claim names), C-23
+(two independent pullers, digest-matched, zero registry egress).
+
+**Deferred, not graded:** C-01 and C-03. Neither claim's test can run at M1 —
+C-01 counts terraform applies *after* M1 completes, and C-03's hands-on half
+needs Compositions that are M2 work. Both are re-scheduled for M2 close. The
+claims themselves are unchanged per the append-only rule; only the grade
+column carries the deferral.
+
+**The pattern worth naming:** two of five M1 claims turned out to be assigned
+to a milestone that cannot execute their test. Surprise 9 recorded that a
+claim's test is a requirement on the *build*; this adds that it is also a
+constraint on the *schedule*. Pre-registration should ask, at write time,
+"what must exist for this test to run, and does that exist by this
+milestone?" — a question worth applying now to every remaining claim rather
+than rediscovering it at each close.
 
 ## M2 — Paved road
 

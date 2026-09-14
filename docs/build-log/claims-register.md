@@ -143,6 +143,15 @@ ADRs before the `System` XRD is written. Four `terraform apply` runs are
 required by the tests and are pre-declared there for C-01's count. Claims
 unchanged, per the append-only rule.
 
+**2026-09-14 — the gating decisions landed as ADR-0012..0015** (tenant
+model; database credential path; admission mechanism; durable resources and
+the rebuild). Two consequences for this register, stated before the build:
+C-06's "move `svc-hello` between teams" is a one-line edit of
+`spec.owner.team` with one predicted re-creation (the registry IAM member);
+and from M2 on, C-02's rebuild is no longer "from empty" — durable resources
+are adopted on `up`, and the cycle results record adopted-vs-recreated so
+C-07(c) and C-02 share evidence. Claims unchanged.
+
 ## M3 — Approval boundary
 
 - **C-09 — The flip forces review.** (ADR-0002)

@@ -302,6 +302,38 @@ Smaller, decided in passing: hand-push the `svc-hello` image vs. a CI
 identity now; Composition-managed vs. layer-0 IAM for team groups; PSA
 vs. an alternative for the database network path.
 
+**Decided 2026-09-14, twelve days after the walk, before any build
+command.** The four ADRs are 0012 through 0015, in the order above:
+
+1. **ADR-0012** — a System is one deployable unit with its own namespace;
+   the team is `spec.owner.team`, resolved to `<team>@<org-domain>` by
+   convention. C-06 is a one-line edit; the predicted "re-created" entry is
+   the registry IAM member. The GKE authentication hop goes to
+   `gke-security-groups` once, in layer 0 (the smaller team-group IAM
+   decision, settled the layer-0 way).
+2. **ADR-0013** — the application authenticates as its own Google service
+   account through Cloud SQL IAM database authentication; no password is
+   handed to it. The bootstrap `postgres` password is platform-generated,
+   team-held, and used only by the Composition's `GRANT` job. "Usable"
+   is the pod serving a request from its own table with no Secret mounted.
+   Private IP over PSA is assumed (the smaller network-path decision,
+   settled the 1-network way).
+3. **ADR-0014** — the XRD schema denies first (`enum`, closed fields, CEL
+   with developer-facing messages); Kyverno is installed validate-only for
+   the raw-managed-resource reality gate and per-System budgets. Messages
+   are recorded from CI, the API server, and Argo CD.
+4. **ADR-0015** — instances, databases and registry repositories are
+   durable (no `Delete` policy, both deletion-protection flags), adopted
+   on rebuild by deterministic external names, and parked with
+   `activationPolicy: NEVER` by an explicit `cycle.sh park` that is not part
+   of `down`. C-02's meaning changes from M2 on and the results file gains
+   an adopted-vs-recreated check.
+
+The remaining small decision — how the `svc-hello` image gets into the
+registry — is settled the way the walk recommended: pushed by hand once for
+M2, recorded as a manual step, with a CI identity deferred to the M4 change
+class that needs it.
+
 ### Build order the walk implies
 
 1. The four ADRs above.
@@ -344,6 +376,43 @@ C-05..C-08.
 
 ## Research verified
 
+- **[C] Crossplane XRD schemas accept `x-kubernetes-validations` CEL rules
+  with a `message`, and `crossplane resource validate` evaluates them
+  offline** (Crossplane CLI reference, v2.4/v2.5, read 2026-09-14). The
+  basis for ADR-0014's gate order.
+- **[C] Crossplane adopts an existing external resource by
+  `crossplane.io/external-name`;** the `Create` policy applies only "if the
+  external resource doesn't exist" (managed-resources doc and
+  import-existing-resources guide, v2.3/v2.4, 2026-09-14). The basis for
+  ADR-0015's rebuild-adopts rule.
+- **[C] Cloud SQL IAM database authentication** (Google docs, 2026-09-14):
+  principals are user accounts, service accounts, or groups; login is by
+  temporary token over required SSL; `roles/cloudsql.instanceUser` to log
+  in plus `roles/cloudsql.client` for the Auth Proxy or connectors; the
+  instance flag `cloudsql.iam_authentication=on`; the Postgres username for
+  a service account drops the `.gserviceaccount.com` suffix. Workforce
+  Identity Federation has its own login path; *workload* identity
+  federation principals are not listed, so ADR-0013 assumes a Google
+  service account per System [I].
+- **[C] provider-gcp-sql v3.0.0 `User.spec.forProvider.type`** accepts
+  `BUILT_IN`, `CLOUD_IAM_USER`, `CLOUD_IAM_SERVICE_ACCOUNT`,
+  `CLOUD_IAM_GROUP` and the group-member variants; `DatabaseInstance`
+  carries `settings.activationPolicy` (`ALWAYS` / `NEVER` / `ON_DEMAND`),
+  `deletionProtection`, and `settings.deletionProtectionEnabled` (CRDs at
+  tag v3.0.0, 2026-09-14).
+- **[C] A stopped Cloud SQL instance (`activationPolicy: NEVER`) "suspends
+  instance charges"; storage and IP address charges continue** (Cloud SQL
+  start/stop doc, 2026-09-14). The basis for ADR-0015's park-not-delete.
+- **[C] IAM Conditions can bound a project-IAM-admin grant to specific
+  roles** via `api.getAttribute('iam.googleapis.com/modifiedGrantsByRole',
+  []).hasOnly([...])`; the attribute lists only the roles a request
+  modifies and is empty otherwise (IAM conditions attribute reference,
+  2026-09-14). The basis for ADR-0013's bounded provider grant.
+- **[C] The root Application carries no `resources-finalizer`**
+  (`3-argocd/charts/root-app`, read 2026-09-14), so `cycle.sh down` orphans
+  child Applications rather than cascading deletes — which is why nothing
+  Crossplane created has ever been deleted by a teardown, and why that is
+  luck rather than policy until ADR-0015's management policies land.
 - **[C] provider-upjet-gcp v3.0.0 kinds beyond the C-03 list (checked
   2026-09-02** against the shipped CRDs under `package/crds/` at tag
   v3.0.0): `artifact.RegistryRepositoryIAMMember`, `cloudplatform.Project`

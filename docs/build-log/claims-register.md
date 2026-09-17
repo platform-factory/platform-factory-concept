@@ -152,6 +152,21 @@ and from M2 on, C-02's rebuild is no longer "from empty" — durable resources
 are adopted on `up`, and the cycle results record adopted-vs-recreated so
 C-07(c) and C-02 share evidence. Claims unchanged.
 
+**2026-09-16 — M2 was built and first exercised.** One bundled `terraform
+apply` for layer 0 and one for layer 1 (layer 1 twice — the second an
+outputs-only re-apply after an operator error), with layers 2 and 3 carried on
+the normal rebuild; both XRDs and Compositions live on a rebuilt cluster, two
+tenants, one database an application logs into with no password, after one
+manual out-of-band user create forced by an upstream provider bug; and Kyverno
+installed. First data exists for C-05, C-06 and C-07(a)(b), and for C-01's
+apply count, C-02's bring-up and C-03's hands-on half; C-07(c), the Argo CD
+denial surface, a clean C-06 re-run and a parked rebuild have not been run,
+and C-08 was not attempted. **Nothing is graded:** every M2 claim stays
+UNTESTED in the scoreboard until M2 closes, because ADR-0008 earns grades at
+a close with evidence rather than asserting them mid-milestone. The evidence,
+the misses, and a provisional reading that is explicitly not a set of grades
+are in [`m2-paved-road.md`](m2-paved-road.md). Claims unchanged.
+
 ## M3 — Approval boundary
 
 - **C-09 — The flip forces review.** (ADR-0002)

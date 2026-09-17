@@ -1,10 +1,51 @@
-# M2: Paved road — in progress (opened 2026-09-02)
+# M2: Paved road — in progress (opened 2026-09-02; built and first exercised 2026-09-16)
 
-> **Status: OPEN.** No build command has run yet. This entry opens with the
-> test-readiness walk the M1 close asked for — "what must exist for this
-> test to run, and does it exist by this milestone?" — applied to C-05..C-08
-> *before* anything is built. Claims are graded at the bottom when M2
-> closes, including C-01 and C-03, deferred here from M1.
+> **Status: IN PROGRESS.** The paved road was built and first exercised on
+> **2026-09-16**: one bundled `terraform apply` for layer 0 and one for layer 1
+> (layer 1 twice — the second an outputs-only re-apply after an operator
+> error), with layers 2 and 3 carried on the normal rebuild; the `System` and
+> `Database` XRDs and Compositions live on a rebuilt cluster, two tenants, one
+> Cloud SQL database an application logs into with no password — after one
+> manual out-of-band user create forced by an upstream provider bug — and
+> Kyverno installed. **M2 is not closed and no claim is graded.** Grades are
+> earned at close with evidence (ADR-0008), so "Claims graded" below carries a
+> *provisional reading* and nothing else.
+>
+> **Tests still to run before M2 can close** (the list as it stood at the end
+> of 2026-09-16):
+>
+> - C-07(c) — delete the claim, database survives, then re-add and adopt by
+>   external name. **NOT YET RUN.**
+> - C-07(b)'s third denial surface — a bad claim merged to `main`, read from
+>   Argo CD's sync status. **NOT YET RUN.** (The CLI and API-server surfaces
+>   were recorded, including the Kyverno denial read at the API server; see
+>   Data.)
+> - C-06 — manual cleanup of the three stuck `payments` IAM members, then one
+>   clean re-run of the move under the fixed Composition. **NOT YET DONE.**
+> - C-02 — one parked rebuild (`down` → `park` → `up`) for
+>   adoption-after-teardown and an honest cycle number. The 2026-09-16
+>   bring-up is explicitly *not* a clean cycle.
+> - The external-account IAM question — the analyzer says the nested group
+>   grants access and the runtime refuses it. **UNRESOLVED**; resolve or
+>   record.
+> - Codify or disable the three APIs enabled by hand (`cloudidentity`,
+>   `policytroubleshooter`, `cloudasset`).
+> - Remove the creator's direct membership of `gke-security-groups@`, which
+>   Google's groups-only rule forbids.
+> - A Tailscale route for the Private Services Access (PSA) range — the
+>   private address range Cloud SQL lives on (manual, on the jump box).
+> - Decide C-08's governance question — the org-level grant — which is what
+>   C-08's own readiness verdict said it would come down to.
+>
+> **Cost note:** the cluster and the Cloud SQL instance were left RUNNING
+> overnight 2026-09-16→17, because the session's cloud credentials expired
+> before they could be torn down.
+>
+> Everything below this banner down to "Built" is the **pre-registered**
+> test-readiness walk (2026-09-02) and the 2026-09-14 decisions note. It is
+> left exactly as written, predictions included — it is the thing the build is
+> compared against, and correcting it after the fact would destroy the only
+> property that makes the comparison worth reading.
 
 ## Test-readiness walk (2026-09-02, before the first build command)
 
@@ -359,20 +400,446 @@ class that needs it.
 
 ## Built
 
-Nothing yet. This entry opens before the first build command.
+Everything here was authored on 2026-09-16 and, except where a PR is still
+open, merged the same day. Times are UTC.
+
+**`platform-factory` (this repo, the design seed).** PR #5 — the
+test-readiness walk above. PR #6 — ADR-0012..0015, stacked on #5. Both still
+**open**: the build ran against the branches, which is the same practice the
+earlier layers used and is recorded rather than tidied.
+
+**`platform-bootstrap`.** PR #11, **open**, applied from the branch before
+merge. One bundled change per layer — layers 0, 1 and 2 as the walk
+pre-declared, plus two the walk's own table does not list: a layer-3 change
+and the `cycle.sh` work. (The fourth thing the walk pre-declared, the
+org-level apply for C-08, never happened, because C-08 was not attempted.)
+Layer 0 gains the provider identity (Google service account, Workload
+Identity bindings, roles, the two APIs, and the umbrella-group grant);
+layer 1 gains Private Services Access; layer 2 gains
+`authenticator_groups_config`; layer 3 gains Argo CD health checks for the
+two new XR kinds. `scripts/cycle.sh` gains ADR-0015's `park` command and an
+adoption check on `up`. The PR also merges in the PR #10 branch, so the
+already-destroyed `xpkg.upbound.io` remote is not recreated. Follow-up
+commit `88129e7` forces UTC on the adoption check's timestamps (surprise 11)
+and records the bring-up.
+
+**`platform-config`.** PR #2 (merged 16:31:17) is the M2 surface:
+`DeploymentRuntimeConfig`s pinning each provider's service account, the
+`ClusterProviderConfig`, an `EnvironmentConfig`, three Crossplane functions,
+the aggregated `ClusterRole`, the `System` XRD + Composition, the `Database`
+XRD + Composition, a vendored Kyverno chart 3.9.1 with two policies, and five
+new Argo Applications. Then **five fix PRs, every one of them found by the
+live run and not by review**:
+
+- PR #3 — the namespace ordering gate (merged ~16:58).
+- PR #4 — Kyverno concrete provider groups and spec-level `Enforce` (17:01:24).
+- PR #5 — `ServerSideDiff` on both Kyverno Applications (~17:07).
+- PR #6 — team-bearing IAM members carry the team in their names (17:18:30).
+- PR #7 — Kyverno zero drift: explicit defaulted rule fields, and two CRD
+  label/annotation pointers ignored (~17:24).
+
+**`systems`.** PR #1, the first tenant `svc-hello`/`payments` (16:31:20).
+PR #2, C-05's second tenant `svc-ledger`/`checkout` (17:02:13). PR #3,
+C-06's move of `svc-hello` from `payments` to `checkout` (17:14:26).
+
+**`svc-hello`.** PR #1, a Go application, Dockerfile, `k8s/` manifests and a
+`Database` claim (16:31:24). PR #2, the Dockerfile rebuilt as a native
+builder stage that cross-compiles, plus the `docs/c07-denials` fixtures
+(~17:00).
+
+**`svc-ledger`.** A new repo, created 2026-09-16, running a placeholder
+unprivileged nginx pulled through the `docker-hub` remote — enough for the
+second tenant's Application to have something to sync.
+
+**Google Workspace (manual prerequisite, done 2026-09-16).**
+`gke-security-groups@`, `payments@` and `checkout@thecloudgeek.io` created
+with `gcloud identity groups create`; `payments` and `checkout` nested in the
+umbrella group; the project owner in `payments`; a non-owner external account
+added to `payments` as the C-06 test identity. Creating the umbrella group
+made its creator a direct OWNER/MEMBER, which is precisely what Google's
+groups-only rule for `gke-security-groups` forbids — not yet cleaned up.
+
+### How it was authored, and what the gates caught
+
+One multi-agent workflow produced the whole surface above: 4 research spikes,
+9 authoring streams, 2 adversarial reviewers per stream, 9 fixers and 1
+integration pass — **41 agents, 0 errors, ~72 minutes, ~7.8M subagent
+tokens.** The reviewers raised **84 findings, 13 of them blockers**, and all
+84 were fixed before anything touched the cloud.
+
+The uncomfortable half is the other column. The live run then found **8
+further defects**, among surprises 3–13 below (the live record counts them
+without naming which eight, so no mapping is asserted here). Two of them are
+worse than "review missed something". One is the Kyverno kind selector: the reviewers
+had recorded the wildcard provider group as **VERIFIED by reading Kyverno's
+source code** ("resolved through discovery to concrete GVRs"), and a live
+probe showed it is written verbatim into the webhook and matches nothing — so
+the reality gate was open, and a raw `DatabaseInstance` applied by hand was
+admitted and created a real Cloud SQL instance. The other is the container
+image: the authoring agent **reported that `docker build` succeeded**, and it
+had not been run in a form that could work.
+
+ADR-0006's reasoning — an agent's blast radius is everything it can do, so
+agent-produced instructions get a heavier gate — is why this surface got two
+adversarial reviewers per stream. (The analogy is the reasoning, not the ADR:
+ADR-0006's actual gate is CODEOWNERS on `platform-knowledge` plus a pinned
+release, and nothing here exercised it.) What this run adds is
+where such a gate's ceiling is: both escapes were *claims about reality*
+— what a webhook matches, what a build produces — and neither reading the
+source nor an agent's own report settled them; only execution did. That
+argues for keeping the gate and for making execution part of it, not that the
+gate is sufficient.
 
 ## Data
 
-Collected as the build runs. The register asks for: C-05 lines of YAML
-per tenant and merge→usable wall-clock; C-06 files touched and anything
-re-created; C-07 minutes PR→ready, denial messages verbatim, state after
-claim deletion; C-08 leaked schema fields. C-01's apply count continues
-from one.
+Collected live on 2026-09-16, organised by the claim that asked for it. The
+register asks for: C-05 lines of YAML per tenant and merge→usable wall-clock;
+C-06 files touched and anything re-created; C-07 minutes PR→ready, denial
+messages verbatim, state after claim deletion; C-08 leaked schema fields.
+C-01's apply count continues from one. C-02 and C-03 appear because M2's
+first rebuild and M2's Compositions are where their remaining halves live.
+
+Where a test was not run, it says so in place rather than being left out.
+
+### C-05 — One YAML per tenant
+
+**Lines of YAML per tenant: 11 non-comment lines** (91 with the explanatory
+header). The PR itself changed **1 file** — a rename from `docs/` into
+`tenants/`.
+
+| Time (UTC) | Event |
+|---|---|
+| 17:02:13 | `systems` PR #2 merged |
+| 17:05:10 | `System` object created — Argo CD's ~3-minute repo poll |
+| 17:06:21 | `System` Ready — **merge→Ready 4m08s** |
+| ~17:07 | Placeholder `Deployment` Running in namespace `svc-ledger` under AppProject `svc-ledger` (pod age 17s when checked) — **merge→usable ≈ 5 minutes** |
+
+What appeared from that one file: the namespace; a `ResourceQuota` (pods
+1/20, `requests.cpu` 20m/2, …); two `RoleBinding`s (admin, crossplane-edit);
+the `svc-ledger` Kubernetes service account; an `AppProject` and an
+`Application` (Synced/Healthy); a Google service account and its Workload
+Identity binding; four project IAM members; an Artifact Registry repository
+and its writer member.
+
+The first tenant, for comparison: created 16:49:08, Ready 16:55:04
+(**5m56s**) — and it absorbed both the CRD-not-yet-installed race and the
+namespace ordering lottery (surprise 3). The second tenant ran through the
+ordering gate that came out of that and showed no compose error at all.
+
+**Against the walk's prediction.** The walk's verdict was "runnable at M2.
+One apply (the floor); everything else is PR-shaped." Right on both counts
+for C-05: the tenant surface arrived by PR, and the identity floor it needed
+was a single layer-0 apply. What the walk did not predict is that the first
+tenant would only compose by luck: it died on a different namespaced object
+every reconcile until the `Namespace` happened to go first (Ready 16:55:04),
+and the ordering gate that made it deterministic merged after that
+(`platform-config` PR #3, ~16:58) — in time for the second tenant, not the
+first.
+
+### C-06 — Ownership moves without re-plumbing
+
+**Files touched: 1** — `systems/tenants/svc-hello.yaml`, 1 insertion, 1
+deletion (`team: payments` → `team: checkout`). Merged 17:14:26.
+
+**In-cluster carriers converged by 17:15:41** (~75 seconds after merge; Argo's
+poll happened to be quick): the namespace `team` label, both `RoleBinding`
+subjects (the same objects — `creationTimestamp` unchanged at 16:53:06, so
+updated in place), the `AppProject` role groups, the `platform-system`
+ConfigMap's team/group keys, and the registry `labels.team`. All `checkout`.
+
+**RBAC, by impersonation** (which tests RBAC only, not the IdP): before the
+move, `payments` could list pods in `svc-hello` and `checkout` could not;
+after, the reverse.
+
+**Cloud IAM did not move.** The three team-bearing IAM members — registry
+writer, `roles/cloudsql.client`, `roles/cloudsql.instanceUser` — kept their
+object names, so upjet — the layer that wraps the Terraform GCP provider into
+this Crossplane provider, which is why it inherits Terraform's
+replace-don't-update semantics — was asked to change `member` in place and
+refused:
+
+```
+async update failed: refuse to update the external resource because the
+following update requires replacing it
+```
+
+External names still said `payments`; the registry still granted writer to
+`payments` only. **And the System reported `Ready=True` throughout** — each
+member's `Ready` condition stayed True from its original creation and only
+`Synced` went False — so the failure was invisible from the XR and from Argo
+CD (surprise 7).
+
+**Re-created: 0. Stuck: 3.**
+
+The fix (`platform-config` PR #6) puts the team in those three objects' names
+and composition-resource-names, so a move composes new members and
+garbage-collects the old. After it synced, the three `-checkout` members
+reported `Ready=True`. The three old ones have been **stuck DELETING since
+17:23:33**:
+
+```
+delete failed … Create IAM Members group:checkout@… for project ""
+```
+
+— the refused in-place update had already rewritten their spec, so the delete
+path now runs with an empty project. Cloud still grants `payments` the two
+Cloud SQL roles and registry writer. This needs manual cleanup (remove
+finalizers, then `gcloud … remove-iam-policy-binding`) and then **one clean
+re-run of the move under the fixed Composition — NOT YET DONE.**
+
+**Against the predictions, of which there were two.** ADR-0012's consequences
+predicted files touched one and **one** re-created resource, the Artifact
+Registry IAM member, on Terraform's IAM-member replacement semantics. The
+Composition's own header, written before the run, refined that to files
+touched one and **three** re-created — the registry member plus the two
+project IAM members ADR-0013 §5 added. The measured result: **right about
+which three, wrong about how.** Nothing was re-created; three objects were
+asked to update, refused, and stayed wrong while every signal the platform
+exposes said Ready.
+
+**The identity half of the test is not settled either.** `kubectl auth
+whoami` with the project owner's real token shows Groups
+[`gke-security-groups@`, `payments@`, `checkout@`, `system:authenticated`], so
+GKE resolves nested Google Groups from a real token [C, 2026-09-16]. But a
+project owner cannot be the test subject — IAM grants it everything
+regardless of RBAC — and the non-owner external account added for the test is
+refused with HTTP 403 at the DNS endpoint front door, with `gcloud container
+clusters describe` reporting `Required "container.clusters.get"`, a day's
+propagation later. Cloud Asset `analyze-iam-policy --expand-groups` lists that
+same account as holding `container.clusters.get` through
+`group:gke-security-groups@` on `roles/container.clusterViewer`; Policy
+Troubleshooter answers `MEMBERSHIP_UNKNOWN_INFO_DENIED`. **UNRESOLVED:** the
+analyzer says yes and the runtime says no, for an external consumer account
+nested two groups deep.
+
+### C-07 — Guardrails replace review for databases
+
+**(a) PR → usable database.**
+
+The `svc-hello` PR merged at 16:31:24 while the cluster was still down, so the
+honest clock starts when Argo CD applied the claim.
+
+| Time (UTC) | Event |
+|---|---|
+| 16:54:06 | `Database` claim created |
+| ~17:08 | Cloud SQL instance `svc-hello-main` RUNNABLE (~14 min) |
+| 17:08:17 → 17:10:44 | The IAM `User` managed resource sits failing |
+| 17:10:44 | **MANUAL INTERVENTION** — `gcloud sql users create` out of band |
+| 17:11:22 | User adopted, Ready; GRANT Job `main-grant-b1f59c270b` starts |
+| 17:11:42 | GRANT Job succeeded |
+| 17:11:51 | Application pod Ready — **claim→usable 17m45s, including one manual step** |
+| 17:12:41 | `Database` XR Ready |
+| 17:13:28 | Proof: `POST /notes` then `GET /notes` from a probe pod returned the row (`1  2026-09-16T17:13:28Z  hello from C-07 at 17:13:28Z`); `/healthz` 200 |
+
+The instance as built: `db-f1-micro`, private IP `10.60.0.3`, `ipv4Enabled`
+false, `cloudsql.iam_authentication=on`, `deletionProtectionEnabled` true,
+`activationPolicy ALWAYS`. **No Secret is mounted in the application**; login
+is IAM through the Auth Proxy sidecar (`--private-ip --auto-iam-authn`),
+which is ADR-0013's definition of "usable", met.
+
+The manual step is an upstream provider bug, not a design choice. The `User`
+managed resource failed to create with:
+
+```
+async create failed: recovered from panic: not a string
+```
+
+That is `crossplane-contrib/provider-upjet-gcp` issue **#1000** (open;
+root-caused by a maintainer on 2026-09-14 — v3.0.0 strips `password_wo` from
+the runtime schema, so *every* passwordless `sql.User` create panics). The
+workaround from the issue is to create the user out of band and let Observe
+adopt it. Before the user existed, the application log read:
+
+```
+FATAL: password authentication failed for user "svc-hello@platform-factory-ref.iam"
+```
+
+Whether the Composition could sidestep the bug by supplying a password was
+probed, and it cannot — Cloud SQL answers:
+
+```
+HTTPError 400: Invalid request: Cloud IAM password cannot be set in the database.
+```
+
+So there is no Composition-side workaround; the fix is a provider release.
+
+One unplanned data point on the tenant surface: the `ResourceQuota` works and
+bites. A probe pod with no resource requests was rejected —
+
+```
+pods "c07-probe" is forbidden: failed quota: svc-hello: must specify limits.cpu … requests.memory
+```
+
+**(b) Denied at admission.** ADR-0014 §5 names three *surfaces* — the CLI,
+the API server, and Argo CD's sync status — and Kyverno is a *mechanism*
+whose denial arrives at one of them (the API server, through the webhook).
+Two of the three surfaces were run; Argo CD's was not.
+
+API server (`kubectl apply`), verbatim:
+
+```
+The Database "denied-region" is invalid: * spec.region: Unsupported value: "europe-west1": supported values: "us-central1", "us-east1"
+
+The Database "denied-size" is invalid: * spec.size: Unsupported value: "XL": supported values: "S", "M", "L"
+
+The Database "denied-cel" is invalid: spec: Invalid value: size L is only available to a critical-tier database. Set tier: critical if this database really is business critical, otherwise use size M.
+```
+
+The two enum denials also print:
+
+```
+* <nil>: Invalid value: null: some validation rules were not checked because the object was invalid; correct the existing errors to complete validation
+```
+
+CLI, offline (`crossplane resource validate` v2.5.0 against the XRD): the same
+three messages, prefixed `[x] schema validation error …` and `[x] CEL
+validation error …`, ending `Total 3 resources: 0 missing schemas, 0 success
+cases, 3 failure cases`.
+
+Kyverno reality gate — a raw `DatabaseInstance` applied by hand in the tenant
+namespace, **after** the fix:
+
+```
+admission webhook "validate.kyverno.svc-fail" denied the request: resource DatabaseInstance/svc-hello/raw-observe-only was blocked due to the following policies
+
+deny-raw-managed-resources:
+  no-raw-managed-resources-in-tenant-namespaces: Cloud resources are not created by hand here. Ask for what you need with a platform.thecloudgeek.io claim — a Database, for example — …
+```
+
+**Before** the fix, the identical test was **ADMITTED and created a real Cloud
+SQL instance** (surprise 4).
+
+**Argo CD surface — a bad claim merged to `main`: NOT YET RUN.** ADR-0014 §5
+asks for all three surfaces, and this is the one a developer meets when CI was
+skipped, so C-07(b) is two-thirds recorded.
+
+**(c) Delete the claim, database survives: NOT YET RUN.**
+
+Deletion protection was exercised by accident rather than by test. The raw
+instance applied by hand carried both protection flags, copied from the
+rendered spec; clearing them needed the object's `deletionProtection` patched
+to false **and** `gcloud sql instances patch --no-deletion-protection`, after
+which the provider deleted it (90s + 90s). Both locks held until deliberately
+removed. That is evidence about the locks, not about C-07(c), which asks what
+happens to the database when the *claim* goes away.
+
+### C-08 — Schema survives the Composition swap (stretch)
+
+**Not attempted.** The org-level grant it stands on — project creator plus
+billing user for the provider identity — is an undecided governance question,
+which is exactly the condition the walk's own verdict put on it ("runnable at
+M2 only if the org-level grant is accepted… a 'no' is also a valid C-08
+outcome").
+
+Partial evidence exists and is the part the walk said was the real data point:
+**the `System` schema carries no mechanism fields.** What a developer writes
+is a size class, a tier, a security tier, `owner.team` and `owner.repo` —
+nothing that names a Kubernetes or GCP resource. Leaked fields so far: none.
+That is a review of the schema, not the Composition swap the test asks for.
+
+### C-01 — Terraform applies after M1
+
+The counter continues from one. Every row is a real `terraform apply` against
+the live project.
+
+| # | Date | Layer | Result | Why it could not be a PR |
+|---|---|---|---|---|
+| 1 | 2026-09-02 | 0-foundation | `xpkg.upbound.io` remote removed (`platform-bootstrap` PR #10) | Cleanup of a layer-0 resource; layer 0 is Terraform's by the repo's own rule |
+| 2 | 2026-09-16 | 0-foundation | 14 added, 0 changed, 0 destroyed: service account `crossplane-provider-gcp`; 5 `workloadIdentityUser` bindings, one per pinned provider service account; project roles `artifactregistry.admin`, `cloudsql.admin`, `iam.serviceAccountAdmin`, `compute.viewer`, `resourcemanager.projectIamAdmin` (IAM Condition `only-cloudsql-connect-roles`); `roles/container.clusterViewer` for `group:gke-security-groups@`; APIs `sqladmin` + `servicenetworking` | The identity for the thing that applies PRs cannot itself arrive by PR — surprise 17's "the paved road can pave everything except its own on-ramp", one milestone on. API enablement and project IAM are layer 0 by the repo's rule |
+| 3 | 2026-09-16 | 1-network | 2 added: `google_compute_global_address` `psa` 10.60.0.0/16 (VPC_PEERING) + `google_service_networking_connection` | PSA is reachability, and reachability persists — the layer boundary rule |
+| 3b | 2026-09-16 | 1-network | 0 added, 0 changed, 0 destroyed — outputs only (`+gke_security_group`) | **Not a design crossing: an operator error.** The layer-1 plan was generated *before* layer 0 was applied, so the passthrough output read null, and Terraform omits null outputs from state (surprise 10) |
+
+Two things are not in the table and belong in the grade.
+
+- **Layers 2 and 3 carried their M2 changes on the normal `cycle.sh up`** —
+  `authenticator_groups_config` on the cluster, and Argo CD health
+  customizations for `platform.thecloudgeek.io_System` and `_Database`. Those
+  layers are disposable and are applied by every rebuild anyway, so they added
+  no crossing that C-02 was not already paying for. Whether they count is a
+  decision the grade has to make out loud rather than assume. (Argo CD 3.4.6
+  already ships a built-in `*.upbound.io` health check, so none was added for
+  managed resources.)
+- **Three APIs were enabled by hand, outside Terraform**: `cloudidentity`
+  (needed as a quota project to manage groups — the default quota project
+  resolves to a project this identity cannot use), plus `policytroubleshooter`
+  and `cloudasset` as diagnostics for the external-account IAM question.
+  These should be codified in layer 0 or disabled; **NOT YET DONE**, and they
+  are the honest counterweight to the apply count looking small.
+
+**Against the walk's prediction.** The walk pre-declared four applies — layer
+0, layer 1, layer 2, and an org-level one for C-08. Measured so far: layer 0
+once (as predicted), layer 1 twice (the second an operator error, not a
+design crossing), layer 2 folded into the rebuild, and the org-level apply
+never attempted because C-08 was not. The shape of the prediction held; the
+count is not final until the remaining M2 work is done.
+
+### C-02 — the M2 bring-up (cycle 4 `up`), explicitly not a clean cycle
+
+| Phase | Time |
+|---|---|
+| `2-cluster` apply | 774s |
+| `3-argocd` apply | 89s |
+| verify (10/10 Applications Synced/Healthy; deadline 2400s) | 2289s |
+| **TOTAL** | **3157s (52m37s)** |
+
+The durable-resource check that ADR-0015 added to `cycle.sh` exited 1:
+**adopted 0, recreated 0, new 1** (`cloudsql/svc-hello-main@2026-09-16T16:54:08.673Z`),
+**unknown 2** (`registry/svc-hello`, `registry/svc-ledger` — the timestamp bug
+in surprise 11, since fixed).
+
+**This is a bring-up, not a C-02 measurement**, and the interventions are why:
+
+1. The planned one-time image push (the walk's own accepted manual step).
+2. One out-of-band `gcloud sql users create` — the provider bug above.
+3. Five fix PRs merged while `verify` was still waiting.
+4. A hard refresh of two Applications.
+
+What the run does establish:
+
+- **Sync waves behaved**: crossplane (0) → providers (1; went Degraded once
+  and the retry backstop recovered it, same as M1) → crossplane-platform +
+  kyverno (2) → compositions + kyverno-policies (3) → systems (4) → the tenant
+  Applications composed by the `System`.
+- **The provider identity path works on the first reconcile** [C]: the
+  per-System Google service account and all four `ProjectIAMMember`s reported
+  `Synced=True` on the first try — Google service account + Workload Identity
+  + a `DeploymentRuntimeConfig`-pinned Kubernetes service account +
+  `ClusterProviderConfig` `InjectedIdentity`, end to end.
+- `verify` passed with **111 seconds to spare** against its 2400s deadline,
+  and only after the two Kyverno drift fixes (surprise 5); before them,
+  `cycle.sh` would have failed the rebuild on Applications that were
+  `OutOfSync` with nothing actually different.
+
+### C-03 — the hands-on half, deferred here from M1
+
+Every kind the two Compositions use reconciled at **namespaced** scope on
+provider-upjet-gcp v3.0.0: `RegistryRepository`,
+`RegistryRepositoryIAMMember`, `ServiceAccount`, `ServiceAccountIAMMember`,
+`ProjectIAMMember`, `DatabaseInstance`, `Database` — **except `sql.User` of
+an IAM type, whose create path panics** (issue #1000 above). The kind exists
+and is served; the create path for passwordless users is broken at this
+version. That distinction is the whole of what C-03's grade has to decide.
 
 ## Claims graded
 
-At M2 close. C-01 and C-03 (deferred from M1) are graded here alongside
-C-05..C-08.
+**Nothing is graded here yet.** M2 is open, several of its tests have not run,
+and ADR-0008's rule is that a grade is earned with evidence at a close, not
+asserted while the evidence is still arriving. C-01 and C-03 (deferred from
+M1) will be graded here alongside C-05..C-08 when M2 closes.
+
+### Provisional reading (not grades), 2026-09-16
+
+Which way the evidence currently leans, and what would have to be true before
+writing a grade down would be honest.
+
+| Claim | Which way it leans right now | Needed before a grade is honest |
+|---|---|---|
+| **C-01** — Terraform ends at layer 0 | Toward "the boundary holds, and it is not free": four applies since M1 — the 2026-09-02 layer-0 cleanup plus three on 2026-09-16, two of those identity-and-reachability crossings the design predicts and one an operator error — plus three APIs enabled by hand outside Terraform | The rest of M2 finished without further applies; the hand-enabled APIs codified or dropped; an explicit decision on whether the disposable layers' rebuild applies count |
+| **C-03** — provider kind coverage | Toward HELD with one named gap: every kind the Compositions use reconciles namespaced at v3.0.0 except the IAM `sql.User` create path, which panics on an upstream bug | A decision, stated rather than implied, on whether a broken create path in the pinned version is a coverage gap (grade) or a provider bug (note) — and, if the latter, a re-test on a fixed release |
+| **C-05** — one YAML per tenant | Toward HELD: 11 non-comment lines, one file, merge→usable ≈5 minutes, and the full tenant surface appeared | One tenant onboarded against a repo with no fix PRs in flight, so the ≈5 minutes is a steady-state number rather than a number measured during a build session |
+| **C-06** — ownership moves without re-plumbing | Toward ADJUSTED at best: the in-cluster half moved in ~75 seconds off a one-line edit, the cloud half did not move at all, and the platform reported success while it was wrong | The three stuck members cleaned up, one clean re-run under the fixed Composition, and a real non-owner identity that can actually authenticate — which turns on the UNRESOLVED external-account question |
+| **C-07** — guardrails replace review | Mixed: (a) leans HELD with one manual step caused by an upstream bug; (b) leans HELD on two of three surfaces, but the reality gate admitted the thing it exists to deny until it was fixed mid-run; (c) has no evidence at all | (c) run; the Argo CD denial surface run; and a decision on whether a provider bug outside this repo counts against (a)'s timing |
+| **C-08** — schema survives the Composition swap | Unattempted; the schema half leans well (no mechanism fields leaked), the test half does not exist | The governance decision on the org-level grant. A recorded "no" is a legitimate outcome — but it has to be recorded as a decision, not left as an omission |
 
 ## Research verified
 
@@ -438,6 +905,81 @@ C-05..C-08.
   and was this walk's own first assumption; it would have been a false
   constraint on the C-02 rhythm at M2.
 
+### Verified live by the run (2026-09-16)
+
+These are hands-on results, not document checks — each says what verified it.
+
+- **[C] The provider identity path works end to end** (2026-09-16, cycle 4
+  `up`): a Google service account, a `roles/iam.workloadIdentityUser` binding
+  for a `DeploymentRuntimeConfig`-pinned Kubernetes service account, and a
+  `ClusterProviderConfig` with `credentials.source: InjectedIdentity`.
+  Verified by the per-System Google service account and all four
+  `ProjectIAMMember`s reporting `Synced=True` on the first reconcile.
+  Namespaced managed resources default to `ClusterProviderConfig/default`
+  — read off provider-upjet-gcp v3.0.0's CRDs on 2026-09-16 (the citation is
+  in the header of
+  `platform-config/crossplane/compositions/system/composition.yaml`), and
+  borne out by those composed resources reconciling with
+  `spec.providerConfigRef` omitted.
+- **[C] Crossplane 2.3.5 composes native Kubernetes objects directly**
+  (2026-09-16) — `Namespace`, `ResourceQuota`, `RoleBinding`,
+  `ServiceAccount`, `ConfigMap`, `Secret`, `Job`, Argo CD `Application` and
+  `AppProject` — given the aggregated `ClusterRole` carrying `bind` on the
+  bound roles. Verified in two pieces, because the two Compositions emit
+  different kinds: the two tenants materialised the `System` Composition's set
+  (`Namespace`, `ResourceQuota`, `RoleBinding`, `ServiceAccount`, `ConfigMap`,
+  `AppProject`, `Application`), and the `Secret` and the GRANT `Job` were
+  verified once, by the `svc-hello` `Database` claim — `svc-ledger` is a
+  placeholder with no database. This does
+  *not* settle what Crossplane composes by *default*; see below.
+- **[C] Argo CD 3.4.6 per-kind health keys for
+  `platform.thecloudgeek.io_System` and `_Database` work** (2026-09-16) — the
+  layer-3 health customisations were installed on the rebuild and the two
+  per-kind keys work. (What was *not* recorded is a trace of an Application
+  going Healthy only after its XR went Ready, so that is not claimed here.)
+  An XRD-schema denial and a Kyverno denial both reach the
+  developer with the messages recorded under C-07(b) — from the API server and
+  the webhook. **The Argo CD sync-status surface itself is NOT YET RUN.**
+- **[C] Kyverno 1.19.x / chart 3.9.1: a kind selector's *group* wildcard is
+  not expanded** (2026-09-16), verified by live probe — a wildcard group is
+  written verbatim into the webhook's `apiGroups`, which the API server does
+  not glob, so the rule matches nothing; a concrete group with wildcard
+  version and kind (`g/*/*`) does expand. Rule-level `failureAction: Enforce`
+  is honoured once the webhook actually matches. See surprise 4.
+- **[C] Cloud SQL IAM service-account login through the Auth Proxy with
+  `--auto-iam-authn` works with zero passwords handed to the application**
+  (2026-09-16), verified by the pod serving a row from its own table with no
+  Secret mounted. The converse is also confirmed: a password on an IAM user is
+  rejected by the API (`Cloud IAM password cannot be set in the database`), so
+  ADR-0013's no-password path is not merely preferred, it is the only one.
+- **[C] GKE Google Groups RBAC resolves *nested* groups from a real user
+  token** (2026-09-16), verified by `kubectl auth whoami` with the owner's
+  real token listing the umbrella group and both team groups.
+- **[C] Cloud Asset `analyze-iam-policy --expand-groups` reports
+  nested-group access** (2026-09-16) — and the runtime disagreed for an
+  external consumer account nested two groups deep. Recorded as confirmed for
+  the analyzer's behaviour and **open** for the contradiction; see C-06's data.
+
+### What the walk's "Unverified at walk time" list looks like now
+
+- **Whether any Google Groups exist in the Workspace — settled.** The blocker
+  was the Cloud Identity API on a usable quota project; it was enabled by hand
+  with `--billing-project` and the three groups were created on 2026-09-16
+  (see Built). The answer was "none existed"; they exist now. One residue: the
+  creator became a direct member of `gke-security-groups@`, which Google's
+  groups-only rule forbids, and it is not yet cleaned up.
+- **Whether `InjectedIdentity` works with the direct federated-principal
+  form — still unverified.** The build took the documented Google
+  service-account form and it works (above), so the shortcut that would have
+  shrunk the floor apply to IAM bindings alone was never tested. It stays on
+  the list.
+- **Crossplane's default composable-kinds list — still unverified.** M2
+  granted the aggregated `ClusterRole` up front, so what Crossplane composes
+  *without* it remains untested. What is now known is that the aggregated role
+  with `bind` is sufficient for the full tenant surface.
+- **Project-creation quota on the billing account — still unverified.** It is
+  C-08's prerequisite and C-08 was not attempted.
+
 ## Surprises (running list)
 
 1. **C-07(c) quietly rewrites C-02's test.** A database whose claim
@@ -465,3 +1007,202 @@ C-05..C-08.
    and un-runnable tests (surprise 9); this is a third kind: a test that
    is runnable under either reading and means something different under
    each.
+
+*Surprises 3 onward were met on 2026-09-16, in the order they are numbered.*
+
+3. **A Composition that emits a namespace and sixteen things inside it is
+   a lottery, and Crossplane stops at the first loser.** Composed resources
+   are applied in map order and the pipeline halts at the first apply error.
+   A new `System` therefore died on a *different* namespaced object every
+   reconcile — `namespaces svc-hello not found` on `gsa`, then the same on
+   `registry-writer` — until the `Namespace` happened to be applied first and
+   the whole set went through. Cost: the first tenant absorbed it (created
+   16:49:08, Ready 16:55:04), and nothing about the failure named the real
+   cause. Fix: emit only the `Namespace` until it is observed, then
+   everything — two deterministic passes, the same gating the `Database`
+   Composition already uses for its GRANT Job. `crossplane render` shows 2
+   objects before and 17 after. **The general shape:** a Composition that
+   creates a container *and* its contents carries an ordering requirement
+   that nothing in the XR, the XRD or Crossplane's own model expresses — it
+   has to be written by hand, and it is invisible until a fresh namespace is
+   involved, which is exactly the case a tenant Composition exists for.
+
+4. **The reality gate was open, and the code review had marked it
+   verified.** ADR-0014's raw-managed-resource gate names its kinds with a
+   wildcard *group* (`*.gcp.m.upbound.io`). Kyverno writes that string
+   verbatim into the webhook's `apiGroups`, and the API server does not glob
+   apiGroups — so the rule matched nothing at all. Cost: a raw
+   `DatabaseInstance` applied by hand in a tenant namespace was **admitted,
+   and created a real Cloud SQL instance** (deleted ~15 minutes later). Fix:
+   enumerate the five installed provider groups in both families; the webhook
+   then lists ten concrete groups and the identical test is denied with the
+   message recorded under C-07(b). Crossplane's own composed resources still
+   pass, confirmed by the second tenant composing after the fix. **The part
+   worth carrying:** the adversarial reviewers recorded this selector as
+   VERIFIED *by reading Kyverno's source* ("resolved through discovery to
+   concrete GVRs"). They had read the right code; the question was what the
+   API server does with what that code emits, and only a live probe answered
+   it. M1's evidence hierarchy (validate < plan < apply) applies to review
+   too: **source read is not behaviour observed.**
+
+5. **Two Applications sat OutOfSync with nothing different, and the rebuild
+   gate is what made that expensive.** Kyverno defaults the deprecated
+   spec-level `validationFailureAction` to `Audit` and displays it in
+   `kubectl get clusterpolicy` next to rules that say `Enforce`; it defaults
+   `skipBackgroundRequests`, `allowExistingViolations` and `apiCall.method`
+   *inside* `rules[]`, where even Argo CD's `ServerSideDiff` cannot attribute
+   the defaults to the API server; and its chart renders empty
+   `labels`/`annotations` maps on CRDs. Cost: not cosmetic — `cycle.sh` gates
+   a rebuild on every Application being Synced, so this would have failed the
+   rebuild rather than annoying someone. Fix: state the defaulted fields
+   explicitly, ignore two CRD pointers, and turn on `ServerSideDiff`
+   (`platform-config` PRs #5 and #7); verify then passed with 111 seconds to
+   spare. **General form:** a defaulting admission controller and a GitOps
+   differ disagree by construction, and the disagreement is silent — the
+   Application is red with an empty diff.
+
+6. **The credential path ADR-0013 chose rests on one provider kind, and that
+   kind's create path panics.** `provider-upjet-gcp` v3.0.0 cannot create a
+   passwordless `sql.User` (issue #1000: v3.0.0 strips `password_wo` from the
+   runtime schema, so every such create panics). ADR-0013's whole design —
+   the application logs in as itself, no password anywhere — needs exactly
+   that object. Cost: one manual `gcloud sql users create` per database, and
+   2m27s of C-07(a)'s 17m45s. Fix: none available inside this repo; Cloud SQL
+   refuses a password on an IAM user, so the Composition cannot route around
+   it. The out-of-band create plus Observe adoption is the upstream
+   workaround until a fixed provider ships — **which is precisely the
+   dependency-bump change class M4 is built around.** The first time this
+   build has wanted the factory's own machinery for its own sake.
+
+7. **An XR can report Ready while the cloud grant it represents is stale, and
+   every signal the platform exposes agrees with it.** Two mechanisms
+   compound. upjet refuses an update that would require replacing the
+   external resource, permanently rather than retrying; and a managed
+   resource's `Ready` condition is not re-evaluated by a failed update, so it
+   keeps saying True from its original creation while only `Synced` goes
+   False. `function-auto-ready` judges the XR on `Ready`, not `Synced`. Cost:
+   C-06's first run "succeeded" — one-line edit, namespace and RBAC moved in
+   75 seconds, System Ready — with three cloud bindings still granting the
+   old team. Fix: put the team in those objects' names so a move composes new
+   ones (`platform-config` PR #6). **General form:** `Ready` answers "did
+   this ever work", `Synced` answers "does it match what you asked for", and
+   a status surface built on the first cannot see drift. Same family as M1's
+   surprises 12, 14 and 15 — a confident, well-formed answer pointing the
+   wrong way — and the most expensive version of it, because here the wrong
+   answer is the green one.
+
+8. **"docker build succeeded" was reported by the authoring agent and was
+   false.** The legacy builder cannot cross-build — it loses the platform at
+   the first intermediate layer — and with buildx the amd64 Go toolchain
+   panicked under CPU emulation in `go mod tidy`. Cost: found only when the
+   image was needed by a running cluster. Fix: a builder stage on
+   `$BUILDPLATFORM` that cross-compiles with `TARGETOS`/`TARGETARCH`
+   (`svc-hello` PR #2). **Same family as M1 surprises 8 and 12, with one
+   addition:** exit 0 is not a result, *and an agent's report of a validation
+   is not the validation*. In M1 the misleading evidence came from a tool; in
+   M2 it came from the author, and the author's report was the only evidence
+   anyone had.
+
+9. **The image push is a genuine circular dependency, and kubelet dissolves
+   it.** The registry the image goes to is created by the `System` the
+   `Deployment` belongs to, so at first bring-up neither can go first. It
+   resolved itself inside the verify window with no machinery: push once the
+   registry managed resource is Ready, kubelet's `ImagePullBackOff` retries,
+   the pod recovers. First bring-up only — afterwards the registry is durable
+   (ADR-0015) and the cycle does not recur. Worth recording before someone
+   designs an ordering mechanism for a problem a retry loop already solves.
+
+10. **A plan generated before the previous layer's apply silently dropped a
+    passthrough output.** Terraform omits null outputs from state, so a
+    layer-1 plan made before layer 0 was applied read null for the
+    passthrough and stored nothing — no error, no diff, just a missing
+    output. Cost: one outputs-only re-apply, recorded as #3b on C-01's
+    counter rather than folded into #3. Fix and rule: plan each layer only
+    after the previous layer's apply.
+
+11. **A guard written against drift fired on its own first real run, because
+    `gcloud` rewrote a timestamp.** `gcloud artifacts repositories list`
+    rewrites `createTime` into local time with no zone, even under
+    `--format=value()`, so the adoption check's Zulu guard tripped and both
+    registries came back `unknown` in the durable row. Fix: force UTC (commit
+    `88129e7`). Small, and the reason it is here is that the check was
+    ADR-0015's new safety net on its first outing — **a guard's first run is
+    a test of the guard, not of the thing it guards.**
+
+12. **M1's quota-project confusion came back wearing different clothes.**
+    Group management and both IAM diagnostics resolved to a project this
+    identity cannot use as a quota project; every call needed
+    `--billing-project`. Cost: three APIs enabled by hand, which are now open
+    C-01 debt (codify in layer 0 or disable). Recurrence is the finding —
+    the identity that builds this platform is not the identity Google's
+    tooling assumes it is talking to, and that shows up once per milestone in
+    a new place.
+
+13. **Crossplane's watch circuit breaker opened on the project IAM
+    members.** `Too many watch events from ProjectIAMMember … Allowing events
+    periodically`, with `Responsive=False`. Transient and self-healed, and
+    recorded only because M2 has just made `ProjectIAMMember` the resource a
+    team move creates and deletes in threes — a churn signal on the object
+    C-06's fix multiplies.
+
+### ADR errata found by the build
+
+ADRs are superseded, never edited, so where the build found an ADR's text
+wrong the correction lives here. Each says whether it looks like it needs a
+superseding ADR at M2 close; that call is made at close, not now.
+
+- **ADR-0012 §4 — four carriers, not six.** §4 says changing
+  `spec.owner.team` changes "exactly four things"; with ADR-0013 §5's two
+  team project IAM members (`roles/cloudsql.client`,
+  `roles/cloudsql.instanceUser`) it is **six**, plus a seventh that is not a
+  grant — the `platform-system` ConfigMap's `group` key, a derived
+  convenience copy. §5's consequence "a team move therefore touches no cloud
+  IAM" is wrong for the same reason, and it is wrong in the Decision rather
+  than in an example. The implementation documents six. **Likely needs a
+  superseding ADR at close**, because C-06's grade rests on the count and on
+  that consequence.
+- **ADR-0014 §3 — a wildcard provider group cannot be expressed in a Kyverno
+  kind selector.** §3 writes the reality gate's kinds as
+  `*.gcp.m.upbound.io` / `*.gcp.upbound.io`; a group wildcard is passed
+  through to the webhook verbatim and matches nothing (surprise 4). The
+  working form enumerates the installed provider groups — ten concrete groups
+  across the two families — and must be extended whenever a provider is
+  added. Also erratum in the same ADR: its consequence "the `ServerSideDiff`
+  change is not needed yet" did not hold, though not for the reason it
+  names — no mutating policy was installed, and Kyverno's *own* field
+  defaulting was enough to force it (surprise 5). **Probably does not need a
+  superseding ADR**: the decision — schema denies first, Kyverno validate-only
+  for the rest — is unaffected. Recorded here so nobody implements §3
+  literally and reopens the gate.
+- **ADR-0013 — three gaps between the decision and what M2 built.** (i) §2's
+  IAM `User` depends on a provider fix: at v3.0.0 the create path panics, so
+  the object at the centre of the credential path arrives by one manual
+  `gcloud` command per database (surprise 6). (ii) §5's human path — a
+  `CLOUD_IAM_GROUP` user plus `psql` from the tailnet — **is deferred and not
+  built in M2**; the `Database` Composition's header says so explicitly and,
+  importantly, says the cross-XR team lookup that would enable it *is*
+  possible (roughly eight lines plus one RBAC rule), so the deferral must not
+  be recorded as a Crossplane limitation. In the meantime a human reaches the
+  database with the break-glass superuser password, which is the shared
+  credential ADR-0013 set out to avoid. (iii) **That break-glass password is
+  stale after a rebuild.** The `<claim>-admin` Secret dies with the cluster,
+  the Composition mints a new one, and Cloud SQL never learns it — the root
+  password is pushed exactly once, at instance create (traced 2026-09-16
+  through the provider, upjet and `terraform-provider-google` sources; the
+  citations are in the header of
+  `platform-config/crossplane/compositions/database/composition.yaml`).
+  Recovery is one `gcloud sql users set-password postgres` command, and
+  C-02's zero-intervention bar is unaffected because the GRANT Job tries the
+  application's IAM login first. **(i) is upstream — record and re-test on a
+  fixed release. (ii) and (iii) need either the build to catch up or a
+  superseding ADR at close stating the M2 position honestly.**
+- **ADR-0012's "re-created" mechanism is not what the provider does.** The
+  Consequences predict one re-created resource on Terraform's IAM-member
+  replacement semantics ("changing `member` forces replacement"); the
+  Composition's own header refined that to three before the run. What
+  happened is neither: upjet **refuses** to replace, so zero were re-created
+  and three are permanently stuck (surprise 7). The fix — the team in the
+  object's name, so a move composes new objects and garbage-collects the old
+  — makes "re-created" literal and keeps the count at three, but it is a
+  design change to the Composition's naming. **If C-06 grades ADJUSTED at
+  close, this is the change the superseding ADR has to describe.**

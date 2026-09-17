@@ -12,14 +12,14 @@ Grades: **UNTESTED** → **HELD** | **ADJUSTED** (superseding ADR linked) |
 
 | ID | Claim (short) | Milestone | Grade |
 |----|---------------|-----------|-------|
-| C-01 | Terraform ends at layer 0 | M1 | UNTESTED — deferred to M2 (2026-08-28) |
+| C-01 | Terraform ends at layer 0 | M1 | **ADJUSTED** (2026-09-17, ADR-0016 §7) — deferred from M1 |
 | C-02 | Tear-down/rebuild is cheap enough to run between sessions | M1 | **HELD** (2026-08-28) |
-| C-03 | provider-upjet-gcp covers the kinds the Compositions need | M1 | UNTESTED — deferred to M2 (2026-08-28) |
+| C-03 | provider-upjet-gcp covers the kinds the Compositions need | M1 | **HELD** for the kinds M2 composes, one recorded gap (2026-09-17) — deferred from M1 |
 | C-04 | One Argo app-of-apps can own the whole cluster surface | M1 | **HELD** for the M1 surface (2026-08-28) |
-| C-05 | One YAML per tenant materializes the full tenant surface | M2 | UNTESTED |
-| C-06 | Ownership moves with a YAML edit, no re-plumbing | M2 | UNTESTED |
-| C-07 | Database claims: guardrails replace review | M2 | UNTESTED |
-| C-08 | The System schema survives a Composition swap | M2 (stretch) | UNTESTED |
+| C-05 | One YAML per tenant materializes the full tenant surface | M2 | **HELD** (2026-09-17) |
+| C-06 | Ownership moves with a YAML edit, no re-plumbing | M2 | **ADJUSTED** (2026-09-17, ADR-0016 §1–2) |
+| C-07 | Database claims: guardrails replace review | M2 | **ADJUSTED** (2026-09-17, ADR-0016 §3–4) |
+| C-08 | The System schema survives a Composition swap | M2 (stretch) | UNTESTED — not attempted; deferred to M3 pending a governance decision (2026-09-17) |
 | C-09 | internal→external is a `git mv` that forces security review | M3 | UNTESTED |
 | C-10 | CI can hold folder ↔ field consistency | M3 | UNTESTED |
 | C-11 | Kyverno reality gates back every intent gate | M3 | UNTESTED |
@@ -35,6 +35,8 @@ Grades: **UNTESTED** → **HELD** | **ADJUSTED** (superseding ADR linked) |
 | C-21 | Agents operate PR-only with their own identity, fully attributable | M4 | UNTESTED |
 | C-22 | Knowledge freshness and the question bank work as CI | M4 | UNTESTED |
 | C-23 | Image pulls ride the Google-API path; internet egress reduces to git (added 2026-08-06) | M1 | **HELD** (2026-08-28) |
+| C-24 | A per-System IAM Condition makes a team's Cloud SQL grants independent between Systems (added 2026-09-17, ADR-0016 §2) | M3 | UNTESTED |
+| C-25 | A provider release with the sql.User fix removes the manual database-user step (added 2026-09-17, ADR-0016 §4) | M4 | UNTESTED |
 
 ## M1 — Spine
 
@@ -152,6 +154,69 @@ and from M2 on, C-02's rebuild is no longer "from empty" — durable resources
 are adopted on `up`, and the cycle results record adopted-vs-recreated so
 C-07(c) and C-02 share evidence. Claims unchanged.
 
+**2026-09-16 — M2 was built and first exercised.** One bundled `terraform
+apply` for layer 0 and one for layer 1 (layer 1 twice — the second an
+outputs-only re-apply after an operator error), with layers 2 and 3 carried on
+the normal rebuild; both XRDs and Compositions live on a rebuilt cluster, two
+tenants, one database an application logs into with no password, after one
+manual out-of-band user create forced by an upstream provider bug; and Kyverno
+installed. First data exists for C-05, C-06 and C-07(a)(b), and for C-01's
+apply count, C-02's bring-up and C-03's hands-on half; C-07(c), the Argo CD
+denial surface, a clean C-06 re-run and a parked rebuild have not been run,
+and C-08 was not attempted. **Nothing is graded:** every M2 claim stays
+UNTESTED in the scoreboard until M2 closes, because ADR-0008 earns grades at
+a close with evidence rather than asserting them mid-milestone. The evidence,
+the misses, and a provisional reading that is explicitly not a set of grades
+are in [`m2-paved-road.md`](m2-paved-road.md). Claims unchanged.
+
+### M2 grading note (2026-09-17)
+
+Graded at M2 close; full evidence and reasoning in
+[`m2-paved-road.md`](m2-paved-road.md) under "Claims graded".
+
+**HELD:** C-05 (second tenant from one file of eleven non-comment lines;
+merge to Ready 4m08s, to a running workload about five minutes), C-03 for the
+kinds M2 composes (seven kinds created and reconciled at namespaced scope on
+v3.0.0; one recorded gap — an IAM `sql.User` cannot be created, upstream
+issue #1000, workaround one out-of-band command then adoption; GCS bucket and
+Cloud DNS records not hands-on tested, carried to M3).
+
+**ADJUSTED, each with its superseding ADR (ADR-0016):** C-01 (four applies
+on the persistent layers after M1 against a target of zero, plus two changes
+that rode the ordinary rebuild — identity and reachability for a new
+capability are a declared Terraform crossing; nothing a tenant, service,
+database or ownership change needs was), C-06 (the one-line move re-creates
+three cloud grants in about two minutes, but only once the team is part of
+those objects' names; first run moved nothing in the cloud while reporting
+Ready; a sibling System loses its team's grant for about five minutes until
+ADR-0016 §2 is built), C-07 (passwordless database in 17m45s with one manual
+command forced by the provider bug; denial messages clear at the CLI and the
+API server for every bad claim and through Argo CD for one; the reality gate admitted what it exists to deny until it was
+fixed; claim deletion, survival and 66-second adoption held cleanly).
+
+**Not attempted:** C-08 (stretch). Its test needs organization-level
+project-creation power for the provider identity, a governance question that
+was not decided. Deferred to M3, the same way C-01 and C-03 were deferred
+from M1: the claim and its milestone column are unchanged, only the grade
+column carries the deferral. Also not done: ADR-0015 §6's second rebuild
+mode (after a deliberate delete), carried forward in the build log.
+
+**C-02**, graded HELD at M1, is not regraded. ADR-0015 changed what it
+measures; cycle 5 is its first clean cycle under the new meaning — zero
+manual interventions, 35m31s up, three durable resources adopted, none
+re-created.
+
+**Added, dated 2026-09-17, from ADR-0016:** C-24 and C-25 below. Existing
+claims unchanged per the append-only rule; only the grade column moved.
+
+**The pattern worth naming this time:** M1's note was that a claim's test
+constrains the schedule. M2's is that *a readiness signal is not evidence*.
+Three of M2's defects — a team move that moved nothing in the cloud, a grant
+deleted by a sibling, a gate that matched nothing — were invisible at every
+level the platform reports on, and were found only because the tests read the
+cloud side rather than the object. Pre-registration should ask of every
+remaining claim: what would this test look at if the platform were lying?
+
 ## M3 — Approval boundary
 
 - **C-09 — The flip forces review.** (ADR-0002)
@@ -185,6 +250,19 @@ C-07(c) and C-02 share evidence. Claims unchanged.
   **Test:** primary-source check, then hands-on FQDN egress rule on the
   reference cluster tier. **Data:** availability, tier constraints, behavior
   under DNS churn.
+
+- **C-24 — Per-System grants are independent.** (ADR-0016 §2; added
+  2026-09-17 from M2's shared-grant finding)
+  An IAM Condition scoped to a System's own instances makes that System's
+  Cloud SQL grants separate cloud objects, so another System's lifecycle
+  cannot remove them, and narrows `roles/cloudsql.instanceUser` from
+  project-wide to the instances the System owns.
+  **Test:** two Systems owned by one team; move one to another team while
+  polling the project policy every ten seconds for fifteen minutes; the
+  application still connects through the Auth Proxy under the condition.
+  **Data:** seconds the sibling's grant was absent (target: zero; M2 baseline:
+  about 300); the condition expression as shipped; any API call the condition
+  broke.
 
 ## M4 — Factory slice
 
@@ -238,6 +316,16 @@ C-07(c) and C-02 share evidence. Claims unchanged.
   **Test:** change a dependency of a prose doc; run the bank; revert a skill
   release. **Data:** staleness false-positive/negative cases; bank scores over
   time.
+
+- **C-25 — The provider bump removes the manual step.** (ADR-0016 §4; added
+  2026-09-17 from M2's provider finding)
+  On a provider release containing the fix for upstream issue #1000, a fresh
+  `Database` claim reaches usable with no out-of-band command — and the bump
+  itself arrives as a dependency-bump change of exactly the class M4 builds.
+  **Test:** bump `provider-gcp-sql` through the M4 change class; create a
+  database claim in a System that has never had one. **Data:** provider
+  version; manual commands (target: zero; M2 baseline: one); minutes from
+  claim to usable (M2 baseline: 17m45s).
 
 ## Out of scope here
 

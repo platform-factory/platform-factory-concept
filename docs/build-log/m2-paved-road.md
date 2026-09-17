@@ -1,45 +1,42 @@
-# M2: Paved road — in progress (opened 2026-09-02; built and first exercised 2026-09-16)
+# M2: Paved road — 2026-09-17 (opened 2026-09-02; built 2026-09-16; tested 2026-09-16 and 2026-09-17)
 
-> **Status: IN PROGRESS.** The paved road was built and first exercised on
-> **2026-09-16**: one bundled `terraform apply` for layer 0 and one for layer 1
-> (layer 1 twice — the second an outputs-only re-apply after an operator
-> error), with layers 2 and 3 carried on the normal rebuild; the `System` and
-> `Database` XRDs and Compositions live on a rebuilt cluster, two tenants, one
-> Cloud SQL database an application logs into with no password — after one
-> manual out-of-band user create forced by an upstream provider bug — and
-> Kyverno installed. **M2 is not closed and no claim is graded.** Grades are
-> earned at close with evidence (ADR-0008), so "Claims graded" below carries a
-> *provisional reading* and nothing else.
+> **Status: CLOSED 2026-09-17**, on the evidence below. Five claims are
+> graded ADJUSTED or HELD, one stays UNTESTED with the reason, and the design
+> changes the build forced are decided in
+> [ADR-0016](../adr/0016-what-the-m2-build-changed.md). The short version: the
+> paved road works — a tenant from one eleven-line file in about five minutes,
+> a database an application logs into with no password, a database that
+> survives its claim and its cluster and is adopted back in about a minute, a
+> rebuild from parked with zero manual steps — **and three of the four
+> pre-build decisions had to change before that was true.** The entry records
+> the changes as plainly as the results.
 >
-> **Tests still to run before M2 can close** (the list as it stood at the end
-> of 2026-09-16):
+> **Carried forward, not closed by this entry:**
 >
-> - C-07(c) — delete the claim, database survives, then re-add and adopt by
->   external name. **NOT YET RUN.**
-> - C-07(b)'s third denial surface — a bad claim merged to `main`, read from
->   Argo CD's sync status. **NOT YET RUN.** (The CLI and API-server surfaces
->   were recorded, including the Kyverno denial read at the API server; see
->   Data.)
-> - C-06 — manual cleanup of the three stuck `payments` IAM members, then one
->   clean re-run of the move under the fixed Composition. **NOT YET DONE.**
-> - C-02 — one parked rebuild (`down` → `park` → `up`) for
->   adoption-after-teardown and an honest cycle number. The 2026-09-16
->   bring-up is explicitly *not* a clean cycle.
+> - The shared-grant hazard (surprise 14): decided in ADR-0016 §2, **not yet
+>   built**; pre-registered as C-24 for M3.
+> - The upstream provider bug that costs one manual command per new database
+>   (surprise 6); pre-registered as C-25 for the M4 dependency-bump class.
 > - The external-account IAM question — the analyzer says the nested group
->   grants access and the runtime refuses it. **UNRESOLVED**; resolve or
->   record.
-> - Codify or disable the three APIs enabled by hand (`cloudidentity`,
->   `policytroubleshooter`, `cloudasset`).
-> - Remove the creator's direct membership of `gke-security-groups@`, which
->   Google's groups-only rule forbids.
-> - A Tailscale route for the Private Services Access (PSA) range — the
->   private address range Cloud SQL lives on (manual, on the jump box).
-> - Decide C-08's governance question — the org-level grant — which is what
->   C-08's own readiness verdict said it would come down to.
+>   grants access, the runtime refuses it, ~19 hours after the membership was
+>   added. **UNRESOLVED**, which is why C-06's identity check rests on RBAC
+>   impersonation plus a real owner token rather than a real non-owner login.
+> - C-08 (stretch) was not attempted: the org-level grant it needs is an
+>   undecided governance question.
+> - ADR-0015 §6 asked for both rebuild modes at M2. The parked rebuild ran;
+>   **the rebuild after a deliberate delete (fresh creation) did not.** The
+>   `EXPECT_FRESH` path in `cycle.sh` is therefore still unexercised.
+> - Housekeeping: codify or disable the three APIs enabled by hand
+>   (`cloudidentity`, `policytroubleshooter`, `cloudasset`); remove the
+>   creator's direct membership of `gke-security-groups@` (Google requires
+>   groups only); a Tailscale route for the Private Services Access range —
+>   the private address range Cloud SQL lives on (manual, on the jump box);
+>   the human database path and the stale break-glass password (ADR-0016 §4).
 >
-> **Cost note:** the cluster and the Cloud SQL instance were left RUNNING
-> overnight 2026-09-16→17, because the session's cloud credentials expired
-> before they could be torn down.
+> **Cost note:** the cluster and the Cloud SQL instance ran ~19 hours
+> unattended overnight 2026-09-16→17 because the session's cloud credentials
+> expired before teardown (surprise 15). At the end of 2026-09-17 the cluster
+> was destroyed and the instance parked.
 >
 > Everything below this banner down to "Built" is the **pre-registered**
 > test-readiness walk (2026-09-02) and the 2026-09-14 decisions note. It is
@@ -583,9 +580,10 @@ delete failed … Create IAM Members group:checkout@… for project ""
 
 — the refused in-place update had already rewritten their spec, so the delete
 path now runs with an empty project. Cloud still grants `payments` the two
-Cloud SQL roles and registry writer. This needs manual cleanup (remove
-finalizers, then `gcloud … remove-iam-policy-binding`) and then **one clean
-re-run of the move under the fixed Composition — NOT YET DONE.**
+Cloud SQL roles and registry writer. As of the end of 2026-09-16 this needed
+manual cleanup and then one clean re-run of the move under the fixed
+Composition. **Both happened on 2026-09-17 — see "Clean re-run" below, which
+also records what the stuck objects did when nobody was watching.**
 
 **Against the predictions, of which there were two.** ADR-0012's consequences
 predicted files touched one and **one** re-created resource, the Artifact
@@ -610,7 +608,48 @@ same account as holding `container.clusters.get` through
 `group:gke-security-groups@` on `roles/container.clusterViewer`; Policy
 Troubleshooter answers `MEMBERSHIP_UNKNOWN_INFO_DENIED`. **UNRESOLVED:** the
 analyzer says yes and the runtime says no, for an external consumer account
-nested two groups deep.
+nested two groups deep. On 2026-09-17, roughly 19 hours after the membership
+was added, the same account was still refused with HTTP 403 — so this is not
+propagation delay. It stays UNRESOLVED.
+
+**Clean re-run under the fixed Composition (2026-09-17).** The move was run
+again in the other direction (`team: checkout` → `team: payments`), systems
+PR #4: one file, one insertion, one deletion, merged 11:42:01.
+
+| Time (UTC) | What happened |
+|---|---|
+| 11:42:01 | PR merged |
+| 11:43:26 | The three `-checkout` member objects received deletion timestamps; three `-payments` objects were created |
+| 11:43:56 | All three `-payments` members Ready; all three `-checkout` objects gone, no stuck deletes; the cloud policy shows `payments` on both Cloud SQL roles and on the registry writer |
+
+About 30 seconds after the change reached the cluster, 1m55s after the merge.
+Held against the prediction written into the Composition before the first
+run — files touched one, re-created three — **the re-run matches it. The
+first run did not (re-created zero, stuck three); the design had to change
+before its own prediction could come true.**
+
+**The shared-grant hazard, found by what the stuck objects did overnight.**
+The three members stuck deleting on 2026-09-16 eventually completed their
+deletes unattended. Because the refused in-place update had already rewritten
+their spec to `member: checkout`, what they deleted was the *checkout* grants:
+on the morning of 2026-09-17 the project carried no `roles/cloudsql.client` or
+`roles/cloudsql.instanceUser` binding for `group:checkout@` and the svc-hello
+registry's policy was empty — while every `-checkout` member object in both
+tenant namespaces reported Ready. The mechanism is general, not an artefact of
+the stuck objects: a project-level IAM binding is identified by (role,
+member), `svc-hello` and `svc-ledger` were both owned by `checkout`, and each
+System composes its own managed resource for the *same* cloud binding. Deleting
+any one removes the grant for all; the others notice only at their next poll.
+The clean re-run reproduced it on demand: from ~11:43:56 the project listed
+only `payments` on the two Cloud SQL roles although `svc-ledger` was still
+owned by `checkout`, and the provider's own drift correction restored
+`checkout` by 11:48:52 — about five minutes, no intervention, the affected
+objects Ready throughout. (An earlier watch the same morning saw the registry
+writer restored 504 seconds in, consistent with a roughly ten-minute poll.)
+Surprise 14; the candidate fix is in the errata.
+
+Manual cleanup on 2026-09-17: the stale `payments` bindings left by the first
+run were removed with `gcloud`. No finalizer surgery was needed in the end.
 
 ### C-07 — Guardrails replace review for databases
 
@@ -709,11 +748,42 @@ deny-raw-managed-resources:
 **Before** the fix, the identical test was **ADMITTED and created a real Cloud
 SQL instance** (surprise 4).
 
-**Argo CD surface — a bad claim merged to `main`: NOT YET RUN.** ADR-0014 §5
-asks for all three surfaces, and this is the one a developer meets when CI was
-skipped, so C-07(b) is two-thirds recorded.
+**Argo CD surface — a bad claim merged to `main`: RUN 2026-09-17.** svc-hello
+PR #5 put the wrong-region claim into `k8s/` on `main` (merged 11:39:32),
+deliberately skipping the CI gate to see what a developer meets when CI was
+skipped. At 11:41:25 the `svc-hello` Application read sync **OutOfSync**, health
+**Healthy**, operation **Running** (retrying), with this message:
 
-**(c) Delete the claim, database survives: NOT YET RUN.**
+```
+one or more synchronization tasks completed unsuccessfully, reason: Database.platform.thecloudgeek.io "denied-region" is invalid: [spec.region: Unsupported value: "europe-west1": supported values: "us-central1", "us-east1", <nil>: Invalid value: null: some validation rules were not checked because the object was invalid; correct the existing errors to complete validation]. Retrying attempt #1 at 11:41AM.
+```
+
+and per resource: `Database/denied-region: SyncFailed` with the same text. The
+running service and the real claim were untouched. Reverted by PR #6 (merged
+11:41:40). For the wrong-region claim all three of ADR-0014 §5's surfaces are
+now recorded, and the field name and the allowed values survive intact through
+every one. **§5 asked for more than was run:** the oversized claim and the CEL
+rule were recorded at the CLI and the API server only, and Kyverno's denial at
+the API server only. Argo CD relays the API server's message verbatim, so
+there is little doubt what it would show — but that is an inference, not a
+recording.
+
+**(c) Delete the claim, database survives: RUN 2026-09-17, and it held.**
+
+| Time (UTC) | What happened |
+|---|---|
+| 11:33:39 | svc-hello PR #3 (removes `k8s/database.yaml`) merged |
+| 11:34:02 | Claim pruned by Argo CD. Every composed object left the namespace: the instance, database and user managed resources, the GRANT Job, the admin Secret, the connection ConfigMap |
+| after | Cloud SQL: `svc-hello-main` RUNNABLE, createTime `2026-09-16T16:54:08.673Z` unchanged, deletion protection still on, database `app` present, the IAM user present (it is composed with `deletionPolicy: ABANDON`). The application pod stayed 2/2 Running and kept serving — nothing it depends on had changed |
+| 11:35:05 | svc-hello PR #4 (restores the file) merged |
+| 11:37:34 | Claim object re-created by Argo CD |
+| 11:37:42 (the recorder's first check) | Instance managed resource already Ready and Synced — adopted by external name, not created. The IAM user adopted too (`LastAsyncOperation: Success`), so the provider bug was never touched: no create was needed |
+| 11:38:40 | Claim Ready — 66 seconds after it appeared, against ~14 minutes for a fresh instance on 2026-09-16 |
+
+`gcloud sql instances list` afterwards: still exactly one instance, same
+createTime. The row written on 2026-09-16T17:13:28Z read back through the
+service, `/healthz` 200. ADR-0015 §2 — adoption by deterministic external name
+— is confirmed [C, 2026-09-17].
 
 Deletion protection was exercised by accident rather than by test. The raw
 instance applied by hand carried both protection flags, copied from the
@@ -810,6 +880,47 @@ What the run does establish:
   `cycle.sh` would have failed the rebuild on Applications that were
   `OutOfSync` with nothing actually different.
 
+### C-02 — cycle 5, the parked rebuild (2026-09-17): the clean cycle
+
+The bring-up above is not a measurement. This is: `down`, `park`, `up`, with
+**zero manual interventions**, run after every test had finished.
+
+| Phase | Seconds | Note |
+|---|---|---|
+| `down` — 3-argocd destroy | 46 | |
+| `down` — 2-cluster destroy | 594 | `down` total 642s (10m42s). `svc-hello-main` untouched, as ADR-0015 §3 requires |
+| `park` | 55 | found the instance by its `system` label, set `activationPolicy: NEVER`, "stopped in 54s". Verified `STOPPED` / `NEVER`, createTime unchanged |
+| `up` — 2-cluster apply | 801 | |
+| `up` — 3-argocd apply | 89 | |
+| `up` — verify | 1235 | 10/10 Applications Synced/Healthy |
+| `up` — durable | 1 | exit 0: `adopted: 3 [cloudsql/svc-hello-main@2026-09-16T16:54:08Z registry/svc-hello@2026-09-16T16:53:10Z registry/svc-ledger@2026-09-16T17:05:14Z], recreated: 0` |
+| `up` total | **2131 (35m31s)** | |
+
+What happened inside the verify wait, from a read-only recorder:
+
+| Time (UTC) | |
+|---|---|
+| 12:22:50 | Tenant Applications appear on the new cluster |
+| 12:23:12 | Instance goes `STOPPED/NEVER` → `MAINTENANCE/ALWAYS` — **Crossplane restored the activation policy by itself, about 20 seconds after the claim synced. No unpark command exists or was needed** |
+| 12:24:40 | Both Systems Ready; `svc-ledger` Healthy |
+| 12:31:55 | Instance `RUNNABLE` — 8m43s to restart from parked |
+| 12:34:55 | Application container ready |
+| 12:36:24 | Database claim Ready; verify passes at 12:36:32 |
+
+No provider bug on this path — the IAM user already existed and was adopted —
+and no image push, because the registry and the image are durable. Afterwards
+the row written on 2026-09-16T17:13:28Z read back through the service,
+`/healthz` 200, one Cloud SQL instance, createTime unchanged: **the same data
+has now survived a claim deletion, a cluster teardown, and a park.**
+
+Against M1, as ADR-0015 predicted: M1's clean `up`s were about seventeen
+minutes with nothing durable behind them. This one is 35m31s, and about
+twenty of those minutes (1235s) are the verify wait — dominated by a database
+restarting and a tenant that is not Healthy until its database is. The
+rebuild is no longer "from empty"; it is from persisted identity,
+reachability and data, and the number says so. The adoption row's timestamp
+fix (surprise 11) was exercised here for the first time and held.
+
 ### C-03 — the hands-on half, deferred here from M1
 
 Every kind the two Compositions use reconciled at **namespaced** scope on
@@ -822,24 +933,129 @@ version. That distinction is the whole of what C-03's grade has to decide.
 
 ## Claims graded
 
-**Nothing is graded here yet.** M2 is open, several of its tests have not run,
-and ADR-0008's rule is that a grade is earned with evidence at a close, not
-asserted while the evidence is still arriving. C-01 and C-03 (deferred from
-M1) will be graded here alongside C-05..C-08 when M2 closes.
+Graded on 2026-09-17, on the evidence above. A provisional reading stood in
+this section between the two test days and said, explicitly, that it was not a
+set of grades; these replace it. ADJUSTED grades link the superseding ADR that
+ADR-0008 requires.
 
-### Provisional reading (not grades), 2026-09-16
+### C-01 — Terraform ends at layer 0 → **ADJUSTED** ([ADR-0016 §7](../adr/0016-what-the-m2-build-changed.md))
 
-Which way the evidence currently leans, and what would have to be true before
-writing a grade down would be honest.
+The test counts `terraform apply` runs after M1, target zero. The count is
+**four applies on the persistent layers**: the 2026-09-02 cleanup, a bundled layer-0 apply (the provider's
+cloud identity, its roles, two APIs, the group grant), a layer-1 apply
+(Private Services Access), and an outputs-only re-apply that was an operator
+error — a layer planned before the one beneath it was applied (surprise 10).
+Three APIs were also enabled by hand. **And two more Terraform changes are
+counted here rather than hidden:** layer 2's Google Groups setting and layer
+3's health checks rode the ordinary `cycle.sh up` that C-02 already runs
+every session. They added no apply *run*, which is why the count above is
+four; they are still Terraform crossings, which makes six in all. Zero was
+the wrong target in a predictable way: M1's surprise 17 said each new
+platform capability needs one identity-or-reachability crossing, and the
+readiness walk pre-declared three of these before the build (layers 0, 1 and
+2) — the only reason they arrived bundled. The cleanup, the operator-error
+re-apply and the layer-3 change were not pre-declared. What the
+claim protects did hold: **no tenant, service, database, policy or ownership
+change in M2 needed Terraform** — onboarding, a team move, and creating,
+deleting and re-adopting a database were all pull requests. ADR-0016 §7
+restates the boundary to match.
 
-| Claim | Which way it leans right now | Needed before a grade is honest |
-|---|---|---|
-| **C-01** — Terraform ends at layer 0 | Toward "the boundary holds, and it is not free": four applies since M1 — the 2026-09-02 layer-0 cleanup plus three on 2026-09-16, two of those identity-and-reachability crossings the design predicts and one an operator error — plus three APIs enabled by hand outside Terraform | The rest of M2 finished without further applies; the hand-enabled APIs codified or dropped; an explicit decision on whether the disposable layers' rebuild applies count |
-| **C-03** — provider kind coverage | Toward HELD with one named gap: every kind the Compositions use reconciles namespaced at v3.0.0 except the IAM `sql.User` create path, which panics on an upstream bug | A decision, stated rather than implied, on whether a broken create path in the pinned version is a coverage gap (grade) or a provider bug (note) — and, if the latter, a re-test on a fixed release |
-| **C-05** — one YAML per tenant | Toward HELD: 11 non-comment lines, one file, merge→usable ≈5 minutes, and the full tenant surface appeared | One tenant onboarded against a repo with no fix PRs in flight, so the ≈5 minutes is a steady-state number rather than a number measured during a build session |
-| **C-06** — ownership moves without re-plumbing | Toward ADJUSTED at best: the in-cluster half moved in ~75 seconds off a one-line edit, the cloud half did not move at all, and the platform reported success while it was wrong | The three stuck members cleaned up, one clean re-run under the fixed Composition, and a real non-owner identity that can actually authenticate — which turns on the UNRESOLVED external-account question |
-| **C-07** — guardrails replace review | Mixed: (a) leans HELD with one manual step caused by an upstream bug; (b) leans HELD on two of three surfaces, but the reality gate admitted the thing it exists to deny until it was fixed mid-run; (c) has no evidence at all | (c) run; the Argo CD denial surface run; and a decision on whether a provider bug outside this repo counts against (a)'s timing |
-| **C-08** — schema survives the Composition swap | Unattempted; the schema half leans well (no mechanism fields leaked), the test half does not exist | The governance decision on the org-level grant. A recorded "no" is a legitimate outcome — but it has to be recorded as a decision, not left as an omission |
+### C-03 — provider-upjet-gcp kind coverage → **HELD for the kinds M2 composes, with one recorded gap**
+
+The test asks for a hands-on create of each kind and "gaps and workarounds."
+At v3.0.0, namespaced scope: `RegistryRepository`,
+`RegistryRepositoryIAMMember`, `ServiceAccount`, `ServiceAccountIAMMember`,
+`ProjectIAMMember`, `DatabaseInstance` and `Database` all created and
+reconciled. **Gap:** `sql.User` of an IAM type cannot be *created* — the
+create path panics (upstream issue #1000, open); it can be observed and
+adopted. **Workaround:** create the user out of band, one command, and let
+the provider adopt it (38 seconds, measured). Not hands-on tested because no
+M2 Composition uses them: GCS bucket and Cloud DNS records — carried to M3,
+whose edge and DNS work needs them. This is graded HELD rather than ADJUSTED
+because nothing in the design changed; a pinned version has a bug with a
+known workaround and a known fix path, which is exactly the data the claim
+asked for. It is the judgment call in this list, and is named as one.
+
+### C-05 — One YAML per tenant → **HELD**
+
+The second tenant was one file of eleven non-comment lines. Merge to System
+Ready 4m08s, of which about three minutes is Argo CD's repository poll;
+merge to a workload Running under the tenant's own AppProject about five
+minutes. The full surface appeared: namespace, quota, two RoleBindings,
+service account, AppProject and Application, Google service account and its
+Workload Identity binding, four project IAM members, registry and writer.
+Two caveats, stated rather than buried. The first tenant found the ordering
+defect (surprise 3) that the second tenant, the actual test, then ran clean
+through — so the claim held on a Composition one fix *newer* than the one
+first merged. And the provisional reading said an honest HELD wanted a tenant
+onboarded with no fix PRs in flight; that did not happen — three more fixes
+merged to `platform-config` later the same session — so the five minutes is
+a build-session number, not a steady-state one. The claim's test, as
+registered, was run and passed; a steady-state number is cheap to collect the
+next time a tenant is added.
+
+### C-06 — Ownership moves without re-plumbing → **ADJUSTED** ([ADR-0016 §1–2](../adr/0016-what-the-m2-build-changed.md))
+
+Files touched: one, one line, both runs. **First run: re-created zero, stuck
+three** — the in-cluster half moved in about 75 seconds and the cloud half did
+not move at all, while every signal the platform exposes said Ready. After the
+design change (team in the IAM members' names): **one file, three re-created,
+1m55s from merge, no stuck objects** — which is the prediction written into
+the Composition before the first run, true only on the second. Two things
+keep this from HELD beyond the design change itself: the shared-grant hazard
+(a sibling System loses its team's Cloud SQL grant for about five minutes;
+decided in ADR-0016 §2, not yet built, pre-registered as C-24), and the
+identity check. RBAC flipped exactly as designed under impersonation, and a
+real owner token shows GKE resolving the nested groups [C] — but the real
+non-owner login the walk asked for could not be made, because that account is
+refused for a reason still UNRESOLVED.
+
+### C-07 — Guardrails replace review for databases → **ADJUSTED** ([ADR-0016 §3–4](../adr/0016-what-the-m2-build-changed.md))
+
+**(a)** Claim to usable in 17m45s, about fourteen minutes of it Cloud SQL
+creating the instance, with **one manual command** forced by the provider bug.
+The application logs in as its own Google identity, no password, no Secret
+mounted, and wrote and read a row. **(b)** The schema denies first and the
+message names the field and the allowed values: recorded at the offline CLI
+and the API server for all three bad claims, and through Argo CD for the
+wrong-region one (the rest of ADR-0014 §5's matrix was not run). But the reality gate
+**admitted the exact thing it exists to deny** on its first live test, and a
+real Cloud SQL instance was created by hand before the gate was fixed the same
+hour; it has held since, and Crossplane's own resources pass it. **(c)** Held
+cleanly: the claim was deleted, the instance, its database, its user and its
+data stayed and the application kept serving; the claim came back and adopted
+the instance in 66 seconds. The design changed in one place (the gate
+enumerates provider groups) and depends on a provider fix in another, hence
+ADJUSTED rather than HELD.
+
+### C-08 — Schema survives the Composition swap (stretch) → **UNTESTED, not attempted**
+
+The test needs an alternate Composition that mints a GCP project, which needs
+the provider identity to hold project-creation power at the organization —
+the governance question the readiness walk said this claim would come down
+to. It was not decided, so the test was not run. Partial evidence only: the
+`System` schema carries intent fields only — team, repo, tier, security tier,
+a size class — and nothing that names a mechanism. Re-scheduled to M3 pending that decision; a recorded "no" would
+also be a legitimate outcome.
+
+### C-02 — not regraded; redefined, with its first M2 number
+
+C-02 was graded HELD at M1. ADR-0015 changed what it measures from M2 on, and
+cycle 5 is the first clean cycle under the new meaning: zero manual
+interventions, 35m31s up, three durable resources adopted and none
+re-created. The grade stands; the M1 and M2 numbers are not comparable, and
+the data section says why.
+
+### What the grades add up to
+
+Three ADJUSTED, two HELD, one not attempted, none WRONG — and the ADJUSTED
+ones are the interesting result. Two of the three (C-06, C-07) trace to
+decisions made on 2026-09-14, two days before the build, from primary
+sources; the third (C-01) to the design's founding thesis. A careful
+pre-build design was wrong in four places that only a live run could find,
+and one of those (the gate) had been *verified* by independent reviewers
+reading source code. That is the argument for ADR-0008's method, made by the
+method's own output.
 
 ## Research verified
 
@@ -939,7 +1155,7 @@ These are hands-on results, not document checks — each says what verified it.
   going Healthy only after its XR went Ready, so that is not claimed here.)
   An XRD-schema denial and a Kyverno denial both reach the
   developer with the messages recorded under C-07(b) — from the API server and
-  the webhook. **The Argo CD sync-status surface itself is NOT YET RUN.**
+  the webhook. The Argo CD sync-status surface was run on 2026-09-17 and carries the same message (see Data, C-07(b)).
 - **[C] Kyverno 1.19.x / chart 3.9.1: a kind selector's *group* wildcard is
   not expanded** (2026-09-16), verified by live probe — a wildcard group is
   written verbatim into the webhook's `apiGroups`, which the API server does
@@ -959,6 +1175,37 @@ These are hands-on results, not document checks — each says what verified it.
   nested-group access** (2026-09-16) — and the runtime disagreed for an
   external consumer account nested two groups deep. Recorded as confirmed for
   the analyzer's behaviour and **open** for the contradiction; see C-06's data.
+
+### Verified live on the second day (2026-09-17)
+
+- **[C] Adoption by deterministic external name** (ADR-0015 §2): a re-created
+  claim adopted the surviving Cloud SQL instance, its database and its IAM
+  user — instance createTime unchanged, one instance listed, data intact — and
+  a rebuilt cluster adopted the instance and both registries
+  (`adopted: 3, recreated: 0`).
+- **[C] Drift correction from `activationPolicy: NEVER` back to `ALWAYS`**
+  (ADR-0015 §4, [I] at decision time): the provider restored it about twenty
+  seconds after the claim synced on the rebuilt cluster. No unpark command.
+- **[C] `deletionPolicy: ABANDON` on the `User`** leaves the IAM database user
+  in place when the claim is deleted, which is also why re-adding a claim does
+  not meet the create bug.
+- **[C] Argo CD 3.4.6 surfaces an XRD schema denial verbatim** in the
+  Application's `operationState.message` and per-resource `SyncFailed`, with
+  the Application `OutOfSync` but `Healthy` and the sync retrying.
+- **[C] Two managed resources for one unconditioned (role, member) project
+  binding remove each other's grant** — observed twice on 2026-09-17.
+- **[C] Google documents a condition on `roles/cloudsql.client` scoped by
+  `resource.name`** "to grant permission to just the named instance" (Cloud
+  SQL IAM Conditions doc, read 2026-09-17). **[I]** that giving each System's
+  grant its own condition makes them separate cloud objects the provider
+  manages cleanly — the basis of ADR-0016 §2, and exactly what C-24 tests.
+- **[C] The provider's drift correction restores a deleted IAM binding
+  unaided** within its poll: about five minutes on one run, 504 seconds on
+  another.
+- **Still unverified:** why an external consumer account nested two groups
+  deep is refused (HTTP 403) when Cloud Asset's analyzer lists it as holding
+  `container.clusters.get`; whether Cloud SQL evaluates the Auth Proxy's calls
+  against a `resource.name` condition (ADR-0016 §2's precondition).
 
 ### What the walk's "Unverified at walk time" list looks like now
 
@@ -1145,6 +1392,42 @@ These are hands-on results, not document checks — each says what verified it.
     team move creates and deletes in threes — a churn signal on the object
     C-06's fix multiplies.
 
+14. **A team's project-level grant is one cloud object, and every System that
+    team owns composes its own copy of it.** Found on 2026-09-17 by reading
+    what the stuck C-06 objects had done overnight, then reproduced on demand.
+    An IAM binding on a project is identified by (role, member) — nothing
+    else. `svc-hello` and `svc-ledger` were both owned by `checkout`, so each
+    System's Composition produced its own managed resource for the *same*
+    binding of `group:checkout@` to `roles/cloudsql.client` (and again for
+    `roles/cloudsql.instanceUser`). Two objects, one grant. When one System
+    moved to another team, its object was deleted, the provider removed the
+    binding, and the other System's grant went with it — while that System's
+    object went on reporting Ready. The cost is bounded and measured: the
+    provider's drift correction put the grant back unaided in about five
+    minutes on the clean re-run, and within one ~ten-minute poll on the
+    earlier watch. The generalisation is the uncomfortable part. ADR-0012
+    decided a team is a *field*, never a thing; but a project-level grant to a
+    team is a fact about the team, and modelling it as a per-System object
+    means N Systems race over one cloud object. It is the same family as
+    surprise 7: the platform's readiness signal is about the Kubernetes
+    object, and says nothing about whether the cloud agrees. The registry
+    writer is immune by construction — it is a grant on the System's *own*
+    repository, so no other System shares it. Candidate fix in the errata.
+
+15. **Teardown depends on a credential that expires overnight.** The cluster
+    and the Cloud SQL instance ran for about nineteen hours unattended between
+    the two sessions, because the Workspace reauthentication policy expired
+    both the CLI credential and the application-default credential before
+    `cycle.sh down` could be run, and re-authenticating needs a human at a
+    browser. M1 recorded the same policy as a per-session manual cost. M2
+    adds the asymmetry: an expired credential cannot *start* anything, so it
+    fails safe for builds, but it also cannot *stop* anything, so it fails
+    expensive for teardown. The rhythm C-02 relies on — tear down at the end
+    of the session — has to happen before the credential lapses, not after.
+    No fix built; the honest mitigation is procedural (tear down first, write
+    up second), and the real one is a teardown path that does not run on a
+    human's interactive credential.
+
 ### ADR errata found by the build
 
 ADRs are superseded, never edited, so where the build found an ADR's text
@@ -1206,3 +1489,19 @@ superseding ADR at M2 close; that call is made at close, not now.
   — makes "re-created" literal and keeps the count at three, but it is a
   design change to the Composition's naming. **If C-06 grades ADJUSTED at
   close, this is the change the superseding ADR has to describe.**
+
+- **ADR-0013 §1 and §5 — grants at project scope are shared between Systems
+  (surprise 14).** ADR-0013 places the team group's two Cloud SQL roles on the
+  System, as project-level IAM members (ADR-0012 §5 had said a team move
+  "touches no cloud IAM"; ADR-0013 §5, written the same day, made that
+  untrue). Every System a team
+  owns therefore manages the same cloud binding, and removing one removes it
+  for all until drift correction restores it (about five minutes, measured).
+  Candidate fix, not built: give each System's grant its own identity with an
+  IAM Condition scoped to that System's instances — for example
+  `resource.name.startsWith("projects/<project>/instances/<system>-")` — which
+  makes the bindings distinct *and* narrows `roles/cloudsql.instanceUser`,
+  today project-wide, to the instances the System owns. The alternative is to
+  say out loud that a team is a thing after all, with its grants composed once
+  per team. Either is a design decision, so this **will need a superseding
+  ADR at close**; it is recorded here rather than patched in passing.

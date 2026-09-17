@@ -129,6 +129,20 @@ than rediscovering it at each close.
   **Test:** implement an alternate Composition for the same XRD without a
   schema change. **Data:** schema fields that leaked implementation detail.
 
+### M2 readiness note (2026-09-02)
+
+The question the M1 grading note asked for — "what must exist for this
+test to run, and does it exist by this milestone?" — was applied to
+C-05..C-08 before M2's first build command. Result, with the full
+prerequisite list in [`m2-paved-road.md`](m2-paved-road.md): all four
+tests are runnable at M2, so no claim is re-scheduled. Two of them cannot
+be *defined* until decisions the register silently assumed are made — the
+tenant model behind "move `svc-hello` between teams" (C-06), and the
+database credential path behind "usable database" (C-07) — and those go to
+ADRs before the `System` XRD is written. Four `terraform apply` runs are
+required by the tests and are pre-declared there for C-01's count. Claims
+unchanged, per the append-only rule.
+
 ## M3 — Approval boundary
 
 - **C-09 — The flip forces review.** (ADR-0002)

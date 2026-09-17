@@ -232,8 +232,14 @@ codified or disabled at the next layer-0 apply.
 - **Unverified at decision time:** that Cloud SQL evaluates the Auth Proxy's
   connect and IAM-login calls against the instance resource name a condition
   can match; that the provider's `ProjectIAMMember` handles a `condition`
-  block without perpetual diff; whether the external consumer account's
-  refusal at the cluster endpoint (the IAM analyzer says it has access through
-  the nested group, the runtime says 403) is a Google Groups external-member
-  setting or something else. The last one blocks a real-login test of C-06
-  and is carried forward, not explained away.
+  block without perpetual diff; and — the one that matters most — **whether IAM inherits the
+  `gke-security-groups@` grant through a nested team group at all** (ADR-0012
+  §5's [I]). The only identity that depends on nesting is an external consumer
+  account, and IAM refuses it even a plain project read while the IAM analyzer
+  says it has access; the project owner is a direct member of every group, so
+  his access proves nothing. Nesting and external membership cannot be told
+  apart with the identities available. Until a test separates them, the safe
+  reading is ADR-0012 §5's own fallback: a developer who is only in a team
+  group may not be able to reach the cluster, and the cluster role may have to
+  be granted per team group. This blocks a real-login test of C-06 and is
+  carried forward, not explained away.

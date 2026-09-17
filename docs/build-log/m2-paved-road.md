@@ -598,7 +598,10 @@ exposes said Ready.
 **The identity half of the test is not settled either.** `kubectl auth
 whoami` with the project owner's real token shows Groups
 [`gke-security-groups@`, `payments@`, `checkout@`, `system:authenticated`], so
-GKE resolves nested Google Groups from a real token [C, 2026-09-16]. But a
+GKE's Google Groups integration does put a real user's team groups into the
+token [C, 2026-09-16]. It proves less than it first looked (see "Narrowed"
+below): that owner created all three groups and is a *direct* member of each,
+so his token never exercised nesting. And a
 project owner cannot be the test subject — IAM grants it everything
 regardless of RBAC — and the non-owner external account added for the test is
 refused with HTTP 403 at the DNS endpoint front door, with `gcloud container
@@ -611,6 +614,41 @@ analyzer says yes and the runtime says no, for an external consumer account
 nested two groups deep. On 2026-09-17, roughly 19 hours after the membership
 was added, the same account was still refused with HTTP 403 — so this is not
 propagation delay. It stays UNRESOLVED.
+
+**Narrowed later on 2026-09-17, with four read-only checks — and the narrowing
+withdrew a claim this entry had made.**
+
+- The refusal is IAM's, not the cluster endpoint's: with no cluster running,
+  the same account is refused `gcloud projects describe`, which needs only
+  `resourcemanager.projects.get` — a permission `roles/container.clusterViewer`
+  carries.
+- Cloud Identity agrees the chain exists link by link: the account is a
+  direct member of `payments@` (`check-transitive-membership`: true), and
+  `payments@` is a direct member of `gke-security-groups@`.
+- Asked about the whole chain, the same API returns nothing for that account
+  in `gke-security-groups@`; its transitive *search* calls return nothing for
+  anyone, direct members included, or are denied. Google documents those
+  APIs for the higher Workspace and Cloud Identity editions, so this may be
+  an edition limit rather than an answer [I].
+- **The owner is a direct member of all three groups**, because he created
+  them. So neither his access nor his token's group list ever tested
+  inheritance through a nested group. The draft of this entry cited his
+  token as [C] evidence that nested groups resolve; that was wrong and is
+  withdrawn here.
+
+What is left standing: the *only* identity that reaches the
+`gke-security-groups@` grant purely through nesting is refused, and it is
+also an external consumer account, so the two explanations — IAM does not
+inherit through the nested group here, or it does not for external members —
+cannot be separated with the identities available. ADR-0012 §5 marked "IAM
+counts members of nested groups" as [I] and named its fallback (grant the
+cluster role per team group). **There is now no positive evidence for that
+[I] and one confounded negative.** The test that separates the two needs a
+human with group-admin rights: add the refused account *directly* to
+`gke-security-groups@` and retry the project read (works → nesting is the
+problem; still refused → external accounts are), or put a throwaway domain
+user in a team group only. Until one of those is run, the safe reading is
+that a developer who is only in a team group cannot reach the cluster.
 
 **Clean re-run under the fixed Composition (2026-09-17).** The move was run
 again in the other direction (`team: checkout` → `team: payments`), systems
@@ -1006,9 +1044,12 @@ keep this from HELD beyond the design change itself: the shared-grant hazard
 (a sibling System loses its team's Cloud SQL grant for about five minutes;
 decided in ADR-0016 §2, not yet built, pre-registered as C-24), and the
 identity check. RBAC flipped exactly as designed under impersonation, and a
-real owner token shows GKE resolving the nested groups [C] — but the real
-non-owner login the walk asked for could not be made, because that account is
-refused for a reason still UNRESOLVED.
+real owner token carries the team groups — but that owner is a direct member
+of every group, so it shows the GKE integration working, not nesting. The
+real non-owner login the walk asked for could not be made: the one identity
+that depends on nesting is refused by IAM, for a reason still UNRESOLVED and
+now narrowed (see the C-06 data). That leaves ADR-0012 §5's umbrella grant
+without positive evidence, which counts against this claim, not for it.
 
 ### C-07 — Guardrails replace review for databases → **ADJUSTED** ([ADR-0016 §3–4](../adr/0016-what-the-m2-build-changed.md))
 
@@ -1168,9 +1209,11 @@ These are hands-on results, not document checks — each says what verified it.
   Secret mounted. The converse is also confirmed: a password on an IAM user is
   rejected by the API (`Cloud IAM password cannot be set in the database`), so
   ADR-0013's no-password path is not merely preferred, it is the only one.
-- **[C] GKE Google Groups RBAC resolves *nested* groups from a real user
-  token** (2026-09-16), verified by `kubectl auth whoami` with the owner's
-  real token listing the umbrella group and both team groups.
+- **[C] GKE's Google Groups integration puts a real user's groups into the
+  token** (2026-09-16): `kubectl auth whoami` with the owner's real token lists
+  the umbrella group and both team groups. **Not** evidence that nesting
+  resolves — the owner is a direct member of all three groups (corrected
+  2026-09-17; see C-06's data).
 - **[C] Cloud Asset `analyze-iam-policy --expand-groups` reports
   nested-group access** (2026-09-16) — and the runtime disagreed for an
   external consumer account nested two groups deep. Recorded as confirmed for
@@ -1202,8 +1245,10 @@ These are hands-on results, not document checks — each says what verified it.
 - **[C] The provider's drift correction restores a deleted IAM binding
   unaided** within its poll: about five minutes on one run, 504 seconds on
   another.
-- **Still unverified:** why an external consumer account nested two groups
-  deep is refused (HTTP 403) when Cloud Asset's analyzer lists it as holding
+- **Still unverified:** whether IAM inherits the `gke-security-groups@` grant
+  through a nested team group at all (ADR-0012 §5's [I]) — the only
+  nested-only identity is an external consumer account, IAM refuses it even a
+  plain project read, and Cloud Asset's analyzer lists it as holding
   `container.clusters.get`; whether Cloud SQL evaluates the Auth Proxy's calls
   against a `resource.name` condition (ADR-0016 §2's precondition).
 

@@ -19,8 +19,12 @@
 >   (surprise 6); pre-registered as C-25 for the M4 dependency-bump class.
 > - The external-account IAM question — the analyzer says the nested group
 >   grants access, the runtime refuses it, ~19 hours after the membership was
->   added. **UNRESOLVED**, which is why C-06's identity check rests on RBAC
->   impersonation plus a real owner token rather than a real non-owner login.
+>   added. Unresolved at close, which is why C-06's identity check rests on
+>   RBAC impersonation plus a real owner token rather than a real non-owner
+>   login. **Explained a few hours after close — Google filters external
+>   members out of an internal parent group; see the post-close addendum at
+>   the end.** What is still missing is a positive test with a domain user who
+>   is only in a team group.
 > - C-08 (stretch) was not attempted: the org-level grant it needs is an
 >   undecided governance question.
 > - ADR-0015 §6 asked for both rebuild modes at M2. The parked rebuild ran;
@@ -1550,3 +1554,57 @@ superseding ADR at M2 close; that call is made at close, not now.
   say out loud that a team is a thing after all, with its grants composed once
   per team. Either is a design decision, so this **will need a superseding
   ADR at close**; it is recorded here rather than patched in passing.
+
+## Post-close addendum (2026-09-17): the external-account refusal, explained
+
+Added after the entry was closed and merged. Nothing above is rewritten
+except one pointer in the banner; ADR-0016 is not edited, so this is also
+where its "unverified" item gets its answer.
+
+**The test.** One variable, one account. The refused account
+(`[redacted]@gmail.com`, a consumer account outside the Workspace domain, a
+member of `payments@` only) was added *directly* to `gke-security-groups@` at
+18:09:31 and was allowed `gcloud projects describe` at 18:09:54 — 23 seconds
+later. So an external account *can* hold the grant through a group. The direct
+membership was removed at 18:10:18, leaving it a member of `payments@`, which
+is still nested under `gke-security-groups@`.
+
+**The explanation is documented, and it is about external members, not about
+nesting.** Google Workspace's rules for nested groups (Admin Help, "Add a
+group to another group", read 2026-09-17) say: *"External child group members
+can't access content of internal parent group … external nested members are
+filtered out."* An external account reaching an internal parent group through
+a nested child is filtered out of the parent's membership. That is exactly
+the shape of the test identity, it is why Cloud Identity's membership check
+returned nothing for the chain while confirming each link, and the A/B above
+shows IAM honouring the same filter [C for the documented rule; I that IAM's
+refusal is that rule rather than something else that behaves identically].
+
+**What this changes, and what it does not.**
+
+- The refusal that kept C-06 from a real non-owner login was caused by the
+  *choice of test identity*, not by the design. A consumer account was the
+  only non-owner identity to hand; it was the one kind of identity the nesting
+  in ADR-0012 §5 cannot serve.
+- ADR-0012 §5's [I] — "IAM counts members of nested groups" — is **still not
+  positively tested.** Google documents that child group members inherit a
+  parent group's access, and the one negative result now has a cause that
+  does not touch domain users; but no domain user who is *only* in a team
+  group has logged in here. The project owner is a direct member of every
+  group and proves nothing (corrected above). One throwaway domain user in
+  `checkout@` would settle it.
+- A real constraint worth writing down for anyone adopting the pattern:
+  **contractors and partners on outside accounts cannot be onboarded by
+  putting them in a team group.** Under `gke-security-groups@` they are
+  filtered out. They need a domain identity, or a direct grant.
+- C-06's grade is unchanged. It was ADJUSTED for the naming rule and the
+  shared-grant hazard; the identity check was a caveat on it, and the caveat
+  is now smaller and better understood, not gone.
+
+**A side observation on revocation.** Granting through group membership took
+23 seconds. Removing it did not: the account was still allowed 12 minutes after the direct membership was removed, and was refused again at 19:05:08 — 54m50s after the removal (polled once a minute), with the account still nested under the umbrella through `payments@` the whole time. Group-derived access is cached on the way out. Nothing in
+the platform's own flows removes a user from a group — a team move changes
+bindings, not memberships, and RBAC flipped within the same reconcile — but
+off-boarding a person by removing them from a team group is not instant, and
+the pattern should not imply that it is.
+

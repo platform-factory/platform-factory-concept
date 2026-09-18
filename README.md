@@ -4,6 +4,8 @@ An opinionated developer-platform pattern — GitOps control plane, approval-bou
 repo topology, and a knowledge-as-code layer — with a **GCP reference
 implementation** built on GKE, Argo CD, Crossplane, Gateway API, and Kyverno.
 
+Designed and written by **Ronak Patel** ([thecloudgeek LLC](https://github.com/thecloudgeek)).
+
 > **Status: design complete, build phase starting.** The build runs as a
 > pre-registered experiment: the design's falsifiable claims are recorded in
 > [the claims register](docs/build-log/claims-register.md) *before* the build,
@@ -101,4 +103,5 @@ or data — pattern only.
 
 ## License
 
-Apache-2.0.
+Apache-2.0. If you redistribute or build on this work, the attribution to keep
+is in [NOTICE](NOTICE); [CITATION.cff](CITATION.cff) says how to cite it.

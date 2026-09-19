@@ -7,6 +7,8 @@ API is planned for M3 and is not built yet).
 
 Designed and written by **Ronak Patel** ([thecloudgeek LLC](https://github.com/thecloudgeek)).
 
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.22848132.svg)](https://doi.org/10.5281/zenodo.22848132)
+
 > **Status: M1 (Spine) and M2 (Paved road) are built and closed, with their
 > claims graded; M3 (Approval boundary) is next.** The build runs as a
 > pre-registered experiment: the design's falsifiable claims — 22 of them —
@@ -125,6 +127,15 @@ multi-year GKE operation, PR-gated system provisioning, one-repo-per-service
 GitOps, and a curated knowledge layer. This repo is the from-scratch, generic
 reference implementation of those patterns: no client or employer code, config,
 or data — pattern only.
+
+## Citing and archives
+
+Cite Platform Factory by its DOI,
+[10.5281/zenodo.22848132](https://doi.org/10.5281/zenodo.22848132), which
+always resolves to the newest archived release. Each milestone close is
+released here, archived by Zenodo with its own version DOI (the first is
+`m2-close`), and the org repos are tagged to match and archived by
+[Software Heritage](https://archive.softwareheritage.org/).
 
 ## License
 

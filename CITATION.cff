@@ -2,7 +2,9 @@ cff-version: 1.2.0
 message: "If you use or build on this work, please cite it as below."
 type: software
 title: "Platform Factory"
-abstract: "The design seed of the Platform Factory pattern: pattern docs, architecture decision records (ADRs), the pre-registered claims register, and the milestone build logs that grade each claim with evidence."
+abstract: "The design seed of the Platform Factory pattern: pattern docs, architecture decision records (ADRs), the claims register (pre-registered before the build, append-only with dated additions), and the milestone build logs that grade each claim with evidence."
+# The concept DOI: it always resolves to the newest archived release.
+doi: 10.5281/zenodo.22848132
 authors:
   - family-names: Patel
     given-names: Ronak

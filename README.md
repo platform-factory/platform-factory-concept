@@ -2,15 +2,24 @@
 
 An opinionated developer-platform pattern — GitOps control plane, approval-boundary
 repo topology, and a knowledge-as-code layer — with a **GCP reference
-implementation** built on GKE, Argo CD, Crossplane, Gateway API, and Kyverno.
+implementation** being built on GKE, Argo CD, Crossplane, and Kyverno (Gateway
+API is planned for M3 and is not built yet).
 
 Designed and written by **Ronak Patel** ([thecloudgeek LLC](https://github.com/thecloudgeek)).
 
-> **Status: design complete, build phase starting.** The build runs as a
-> pre-registered experiment: the design's falsifiable claims are recorded in
-> [the claims register](docs/build-log/claims-register.md) *before* the build,
-> and each milestone grades them with evidence — including the misses. Follow
-> along — this repo is being built in public.
+> **Status: M1 (Spine) and M2 (Paved road) are built and closed, with their
+> claims graded; M3 (Approval boundary) is next.** The build runs as a
+> pre-registered experiment: the design's falsifiable claims — 22 of them —
+> were recorded in [the claims register](docs/build-log/claims-register.md) on
+> 2026-07-31, *before* the first build command. The register is append-only;
+> three more claims were added later, each dated (C-23 during M1; C-24 and C-25
+> at the M2 close). Each milestone grades claims with evidence — including the
+> misses. As of the M2 close (2026-09-17), eight of the 25 claims carry a
+> grade: five HELD, three ADJUSTED (the design had to change; superseding ADR
+> linked), none WRONG. Two of the HELD grades are scoped in the register
+> itself — C-03 and C-04 held only for the part of the surface built so far.
+> The other seventeen are untested, including one M2 stretch claim (C-08) that
+> was not attempted. Follow along — this repo is being built in public.
 
 ## The pattern in five sentences
 
@@ -30,10 +39,17 @@ Designed and written by **Ronak Patel** ([thecloudgeek LLC](https://github.com/t
    flagged stale by CI when its dependencies change, and regression-tested by a
    question bank that agents are graded against.
 
-## Planned repo topology
+## Repo topology
 
-This repo is the design seed. The reference implementation will be a GitHub org of
-seven repos, because the topology itself is the point:
+This repo is the design seed. The reference implementation is the
+[platform-factory](https://github.com/platform-factory) GitHub org: the seven
+repos below, because the topology itself is the point, plus `svc-ledger`, a
+placeholder service repo added at M2 so the one-file onboarding test (claim
+C-05) had a second tenant. The tree shows the design, not what is built. As of
+the M2 close: `platform-config` runs Crossplane, Kyverno and the
+XRDs/Compositions, while ESO, external-dns and the gateway are M3 work;
+`edge-config` (M3) and `platform-knowledge` (M4) are scaffolds; and
+`template-service` is still a scaffold that M2 did not build.
 
 ```
 ├─ platform-bootstrap    Terraform layer 0: project, VPC, GKE, workload identity,
@@ -68,30 +84,39 @@ policy (not review meetings) enforces the guardrails on the way in:
 ![Platform Factory overall architecture](docs/diagrams/overall-architecture.png)
 
 The floor it stands on — `platform-bootstrap`'s Terraform layers, split by
-lifecycle so the expensive parts are torn down between working sessions and
-the network (and its VPN to other networks) persists. Every image the cluster
-runs arrives through Artifact Registry pull-through caches on Google's own
-network; the only traffic that touches the internet is Argo CD's git pull
-(ADR-0010):
+lifecycle so the expensive parts (the cluster and Argo CD) are torn down
+between working sessions while the network, identities and durable data
+persist. Every image the cluster runs arrives through Artifact Registry
+pull-through caches on Google's own network; the only internet egress the
+cluster itself generates is Argo CD's git pull (ADR-0010; claim C-23, graded
+at M1):
 
 ![Terraform layer-0 GCP architecture](docs/diagrams/gcp-layer0-architecture.png)
 
 Interactive versions of both (zoomable, light/dark) live in
 [`docs/diagrams/`](docs/diagrams/) — open the HTML files locally.
 
+Both diagrams are design-time snapshots from early M1 (2026-08-07) and have
+not been redrawn: they show a site-to-site VPN that was never built (ADR-0011
+replaced it with an identity-gated endpoint and a Tailscale jump box), a
+manually synced root Application (it has auto-synced since 2026-08-13), and
+milestone status as of M1. The build logs are current; the diagrams are not.
+
 ## What's in this repo now
 
 - `docs/design/` — the platform pattern, the knowledge-as-code layer, and the
   factory framing (the personas it serves + the autonomy narrative), in full
 - `docs/adr/` — decision records (the knowledge layer, dogfooded from day one)
-- `docs/build-log/` — the build-as-experiment method (ADR-0008): the
-  pre-registered claims register, one graded evidence entry per milestone, and
-  the in-progress [M1 entry](docs/build-log/m1-spine.md) accumulating
-  surprises in real time
+- `docs/build-log/` — the build-as-experiment method (ADR-0008): the claims
+  register (pre-registered 2026-07-31, append-only with dated additions) and
+  one graded evidence entry per milestone —
+  [M1](docs/build-log/m1-spine.md) and [M2](docs/build-log/m2-paved-road.md)
+  so far, surprises included
 - `docs/diagrams/` — architecture diagrams: static snapshots above,
   interactive HTML originals
 - `research/` — primary-source research digests: API gateway landscape 2026,
-  Crossplane v2 review, Kubernetes egress control 2026, prior-art landscape
+  approval evidence and earned autonomy 2026, Crossplane v2 review, Kubernetes
+  egress control 2026, prior-art landscape
 
 ## Provenance
 

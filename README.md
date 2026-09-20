@@ -43,8 +43,8 @@ Designed and written by **Ronak Patel** ([thecloudgeek LLC](https://github.com/t
 
 ## Repo topology
 
-This repo is the design seed. The reference implementation is the
-[platform-factory](https://github.com/platform-factory) GitHub org: the seven
+This repo is the design seed. The reference implementation lives beside it in
+the [platform-factory](https://github.com/platform-factory) GitHub org: the seven
 repos below, because the topology itself is the point, plus `svc-ledger`, a
 placeholder service repo added at M2 so the one-file onboarding test (claim
 C-05) had a second tenant. The tree shows the design, not what is built. As of
@@ -136,6 +136,11 @@ always resolves to the newest archived release. Each milestone close is
 released here, archived by Zenodo with its own version DOI (the first is
 `m2-close`), and the org repos are tagged to match and archived by
 [Software Heritage](https://archive.softwareheritage.org/).
+
+This repo lived at `github.com/thecloudgeek/platform-factory` until
+2026-09-19, when it moved into the org as `platform-factory-concept`, keeping
+its dated commit history. The `m2-close` Zenodo record and the org repos'
+`m2-close` tags were made before the move and cite the old address.
 
 ## License
 

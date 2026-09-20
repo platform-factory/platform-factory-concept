@@ -5,7 +5,9 @@ repo topology, and a knowledge-as-code layer — with a **GCP reference
 implementation** being built on GKE, Argo CD, Crossplane, and Kyverno (Gateway
 API is planned for M3 and is not built yet).
 
-Designed and written by **Ronak Patel** ([thecloudgeek LLC](https://github.com/thecloudgeek)).
+Designed and written by **Ronak Patel**
+([ORCID 0009-0002-3753-2193](https://orcid.org/0009-0002-3753-2193),
+[thecloudgeek LLC](https://github.com/thecloudgeek)).
 
 [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.22848132.svg)](https://doi.org/10.5281/zenodo.22848132)
 

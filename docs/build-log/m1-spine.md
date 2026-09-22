@@ -285,9 +285,10 @@
   `140.82.114.4:443`, reverse DNS `lb-140-82-114-{3,4}-iad.github.com`,
   WHOIS `OrgName: GitHub, Inc.` **Zero connections to any registry** while a
   fresh cluster pulled Crossplane, six provider packages, and a package
-  dependency for the first time. Five upstreams now proxied in practice
-  (quay, ghcr, ECR Public, Docker Hub, and the Crossplane package track via
-  ghcr).
+  dependency for the first time. Still four upstreams proxied in practice
+  (quay, ghcr, ECR Public, Docker Hub) — the Crossplane package track rides
+  the ghcr remote, so this is a second independent puller, not a fifth
+  registry. (Corrected 2026-09-21; see the C-23 grading note.)
 
 - **C-02 cycle 3: the target reproduced, and the cluster rebuild is a
   constant (Aug 28).** Down: `3-argocd` 58s, `2-cluster` 535s — **9m57**.
@@ -423,6 +424,22 @@
    to produce data?" Every remaining claim with an observability-shaped test
    (C-11's deny behavior, C-12's alert labels, C-18's escape detection) is
    worth re-reading with that question now, before its milestone.
+   **Corrected on 2026-09-21.** The NAT sentence above describes the build
+   only as it stood *before* Aug 13; neither the path nor the filter is
+   current. The filter was flipped `ERRORS_ONLY` → `ALL` on Aug 13, *because
+   of* this surprise (platform-bootstrap PR #4, authored and merged the same
+   day), while NAT still lived in `2-cluster`; ADR-0011's Aug 20 rewrite then
+   moved the already-`ALL` gateway to `1-network/nat.tf` (platform-bootstrap
+   PR #6 — the session is dated Aug 20 in the file's own header comment, the
+   commit is Aug 22 and the merge Aug 27) — recorded above under "Jump box,
+   and Cloud NAT moved to the persist layer" — where it stands at
+   `enable = true` / `filter = "ALL"`, deliberately kept on past the
+   measurement. That flip is what made C-23 gradeable, and it is what the
+   Aug 13 entry above means by "NAT translation logging on (`filter = "ALL"`,
+   see surprise 9)". The VPC flow-logs half still holds: the subnet in
+   `1-network/network.tf` has no `log_config` block. Kept uncorrected above
+   deliberately — the test being un-runnable when it was written is the
+   finding, and fixing the build is what made it runnable.
 10. **A conservative bootstrap default quietly made a claim's target
     unreachable.** `3-argocd`'s `root_app_automated_sync` defaults to
     `false` — sensible while bootstrapping, since it stops a
@@ -920,11 +937,21 @@ tests of two different pullers.
   probe; and NAT logs across the entire rebuild contained two destinations,
   both GitHub.
 
-Five upstreams proxied in practice (quay, ghcr, ECR Public, Docker Hub, the
-Crossplane package track via ghcr). No image needed an exception. The one
+Four upstreams proxied in practice — quay, ghcr, ECR Public, Docker Hub —
+with the Crossplane package track riding the ghcr remote, so what the second
+test adds is a second independent puller, not a fifth registry. (`registry.tf`
+defined six remotes at M1; `registry-k8s-io` and `xpkg-upbound-io` proxied
+nothing.) **Corrected 2026-09-21: this paragraph read "five upstreams" and
+counted ghcr twice.** The grade is unaffected — C-23 rests on the two pull
+tests above, not on the upstream count. No image needed an exception. The one
 remote that looked riskiest — `xpkg-upbound-io`, the only `[I]`-tagged entry
 in `registry.tf` — turned out to be **unnecessary rather than unproven**, and
 is still deployed; deleting it is open cleanup.
+**Updated 2026-09-21:** the cleanup happened — the remote was destroyed on
+2026-09-02, the date the M2 log's Terraform-change counter carries; the code
+removing it (platform-bootstrap PR #10) was written the same day and merged
+2026-09-17, and the comment that replaced it in `registry.tf`'s ghcr block
+records why and what would bring it back.
 
 ### Two claims the register mis-assigned to M1
 

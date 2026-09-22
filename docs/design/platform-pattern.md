@@ -1,18 +1,29 @@
 # The Platform Pattern
 
-Design doc, July 2026. Generalized from patterns designed and run in production at
-fintech scale (multi-year GKE operation, PR-gated provisioning, one-repo-per-service
+Design doc, July 2026; annotated against the build 2026-09-21 (see the dated note
+under Thesis). Generalized from patterns designed and run in production at fintech
+scale (multi-year GKE operation, PR-gated provisioning, one-repo-per-service
 GitOps), rebuilt here from scratch as a generic reference implementation on GCP.
 How to *explain* the pattern — the personas it serves, the autonomy analogy, the
 confident handover — is its own design doc: `factory-framing.md`.
 
 ## Thesis
 
+> **Restated by [ADR-0016 §7](../adr/0016-what-the-m2-build-changed.md) on
+> 2026-09-17, after the M2 build.** Terraform does not end at layer 0; it recurs
+> at a declared boundary. Everything a pull request can carry arrives by pull
+> request; identity and reachability for a new platform capability are a
+> Terraform crossing, declared before the milestone that needs it and bundled
+> into one apply per layer. M2 needed four applies against a target of zero, and
+> three APIs were enabled by hand; C-01 is graded ADJUSTED. What Terraform must
+> never own is unchanged — tenants, services, databases, policy.
+
 **Git is the source of truth for everything; Kubernetes is the control plane.**
 Terraform (or any imperative IaC) has exactly one job: bootstrap the things the
 control plane cannot yet create for itself — the project, the network, the
 cluster, workload identity, and the Argo CD install that takes over from there.
-After layer 0, every change to the platform is a pull request.
+After layer 0, every change to the platform is a pull request — except the
+declared Terraform crossings noted above.
 
 Why this shape: the platform's value is not the infrastructure, it's the
 *contract* it gives product teams — a paved road where declaring intent in your

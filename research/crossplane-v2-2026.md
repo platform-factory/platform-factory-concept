@@ -10,7 +10,10 @@ Ported into this repo 2026-07-29. The provider-coverage verification below ran
 against the **AWS provider family**; this repo's reference cloud is GCP
 (ADR-0005) — the GCP translation notes at the end are [unverified] until
 re-checked at build. Everything about Crossplane core, Argo CD, CI, Kyverno, and
-licensing is cloud-neutral and stands as verified.
+licensing is cloud-neutral and stands as verified. Re-checked against primary
+sources at M1 (2026-08-11) and M2 (2026-09-02, and live on 2026-09-16) — the
+translation notes below now carry the label each row earned and the build-log
+entry that earned it, except where a row says it is still unchecked.
 
 ## Verdict
 
@@ -119,32 +122,61 @@ but couples the runtime to a vendor distribution — hold as option, not default
    v0.21.0 · CLI v2.4.1. Optional, all alive but likely unneeded given native
    composition: provider-kubernetes v1.2.1, provider-helm v1.3.0,
    provider-argocd v0.14.3.
+   Pins as researched 2026-07-28, left as written. What M1 ran: Argo CD chart
+   10.2.2 (app v3.4.6), verified 2026-08-01; Crossplane **v2.3.5** and the GCP
+   provider family v3.0.0, observed on the rebuilt cluster 2026-08-28. The
+   family's ~2-month cadence is a tracked dependency, not a detail — the M1
+   log records these pins as "stale at exactly the moment they were first
+   needed".
 8. **Ingress reality check (AWS framing, retained):** ingress-nginx retired
    (Mar 2026, SIG-recommended migration to Gateway API). EKS Auto Mode's
    built-in load balancing reconciles Ingress/Service only; Gateway API via
    self-managed AWS LBC v3.4.2 (Gateway support GA Jan 2026) as the forward
-   path. GCP shape: GKE's built-in Gateway API controller — see translation
-   notes [unverified].
+   path. GCP shape: GKE's built-in Gateway API controller — still
+   [unverified], and not covered by the translation notes below: the edge
+   model is C-13, an M3 claim still UNTESTED, so no milestone has checked it
+   (noted 2026-09-21).
 9. **Ops notes:** provider CRD-flood problem addressed in v2 via
    ManagedResourceActivationPolicies (alpha — default activates everything;
    allowlist instead); XRD schema changes need a Crossplane pod restart;
    upgrades one minor at a time; `crossplane.io/paused` blocks deletion
    (finalizer).
 
-## GCP translation notes (added at port, 2026-07-29 — ALL [unverified])
+## GCP translation notes (added at port, 2026-07-29; verified at M1 and M2, except where noted)
 
 The reference cloud is GCP (ADR-0005). The matrix above transfers as follows;
-every row needs the same primary-source verification pass before build:
+each translated row below carries the label it earned at M1's verification
+pass (2026-08-11) or at M2's (2026-09-02, and live on 2026-09-16), with the
+build-log entry that earned it — one mapping is still unchecked and says so:
 
-- Provider family: `provider-upjet-gcp` in crossplane-contrib (same Upjet
-  pattern as AWS; namespaced-MR support and per-kind coverage to verify).
-- Pod identity: Workload Identity Federation (GKE-native) replaces EKS Pod
-  Identity — different mechanism (KSA→GSA annotation binding), likely composed
-  from IAM policy bindings rather than a single association kind.
-- Kind mapping to verify: GCS bucket ↔ s3; Cloud SQL instance ↔ rds
-  (managed-password path differs — Cloud SQL has no direct
-  `manageMasterUserPassword` equivalent; secret flow needs its own design);
-  Artifact Registry ↔ ecr; project-level budgets ↔ budgets.
+- **[C]** Provider family: `provider-upjet-gcp` in crossplane-contrib, the
+  same Upjet pattern as AWS. At v3.0.0 every kind the Compositions need exists
+  at **both** scopes, cluster (`*.gcp.upbound.io`) and namespaced
+  (`*.gcp.m.upbound.io`) — verified 2026-08-11 against the shipped CRDs under
+  `package/crds/`, the `examples/` tree and `docs/family/Configuration.md`
+  (M1, "Research verified"); graded C-03 **HELD** for the kinds M2 composes,
+  with one recorded gap.
+- **[C]** Pod identity: Workload Identity Federation (GKE-native) replaces EKS
+  Pod Identity — different mechanism (KSA→GSA annotation binding). The "IAM
+  policy bindings rather than a single association kind" guess was right, and
+  it was M2 that settled it, not M1: a Google service account,
+  `roles/iam.workloadIdentityUser` on the provider's Kubernetes service
+  account, the annotation, and `credentials.source: InjectedIdentity`
+  (`docs/family/Configuration.md` at v3.0.0, M2 "Research verified"; run end
+  to end 2026-09-16).
+- Kind mapping, checked 2026-08-11 against the shipped CRDs at v3.0.0 (M1,
+  "Research verified"): **[C]** GCS bucket ↔ s3 (`Bucket`); **[C]** Cloud SQL
+  instance ↔ rds — the GCP kind is **`DatabaseInstance`**, not `Instance` as
+  the AWS row above implies (the managed-password path does differ: Cloud SQL
+  has no direct `manageMasterUserPassword` equivalent); **[C]** Artifact
+  Registry ↔ ecr (`RegistryRepository`); **[unverified]** project-level
+  budgets ↔ budgets — still unchecked, because no Composition has needed it.
+  On the secret flow, M2 answered differently than this note assumed: **[C]**
+  there is none — Cloud SQL IAM database authentication, the application
+  logging in as its own identity with no password (ADR-0013). **[C]** Cloud
+  DNS `RecordSet` ships as a CRD but appears only under `examples-generated/`,
+  not the uptest-run `examples/` tree — present, and the one needed kind with
+  no tested upstream example (M1).
 - Everything cloud-neutral above (core v2 semantics, Argo integration, CI
   render/validate, Kyverno, licensing) applies unchanged.
 
@@ -158,7 +190,9 @@ every row needs the same primary-source verification pass before build:
 - **v2.0 line is already EOL** (last patch Apr 2026); stay on 2.2+ always.
   v1.20 is the long-support legacy line — irrelevant for greenfield.
 - Non-AWS providers lagged AWS on namespaced-MR support as of v2.3 docs —
-  directly relevant to the GCP family; verify first.
+  directly relevant to the GCP family; verify first. **Closed 2026-08-11
+  [C]:** at v3.0.0 the GCP family ships a `namespaced/` example directory for
+  every service group, so the lag is gone (M1, "Research verified").
 
 ## Sources (primary)
 

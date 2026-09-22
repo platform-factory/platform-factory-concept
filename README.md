@@ -17,13 +17,20 @@ Designed and written by **Ronak Patel**
 > were recorded in [the claims register](docs/build-log/claims-register.md) on
 > 2026-07-31, *before* the first build command. The register is append-only;
 > three more claims were added later, each dated (C-23 during M1; C-24 and C-25
-> at the M2 close). Each milestone grades claims with evidence — including the
-> misses. As of the M2 close (2026-09-17), eight of the 25 claims carry a
-> grade: five HELD, three ADJUSTED (the design had to change; superseding ADR
-> linked), none WRONG. Two of the HELD grades are scoped in the register
-> itself — C-03 and C-04 held only for the part of the surface built so far.
-> The other seventeen are untested, including one M2 stretch claim (C-08) that
-> was not attempted. Follow along — this repo is being built in public.
+> at the M2 close). Some tests' pass criteria were operationalised in a dated
+> readiness walk at the start of the milestone — for M2 on 2026-09-02, and on
+> 2026-09-14 in [ADR-0012](docs/adr/0012-system-is-the-unit-team-is-a-field.md)
+> and [ADR-0013](docs/adr/0013-database-credentials-are-iam-identities.md) —
+> both before that milestone's first build command; the register itself was not
+> reworded. The [M2 log](docs/build-log/m2-paved-road.md) and the
+> [register](docs/build-log/claims-register.md) record which, and when. Each
+> milestone grades claims with evidence — including the misses. As of the M2
+> close (2026-09-17), eight of the 25 claims carry a grade: five HELD, three
+> ADJUSTED (the design had to change; superseding ADR linked), none WRONG. Two
+> of the HELD grades are scoped in the register itself — C-03 and C-04 held
+> only for the part of the surface built so far. The other seventeen are
+> untested, including one M2 stretch claim (C-08) that was not attempted.
+> Follow along — this repo is being built in public.
 
 ## The pattern in five sentences
 

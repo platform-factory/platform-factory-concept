@@ -22,9 +22,9 @@
 >   added. Unresolved at close, which is why C-06's identity check rests on
 >   RBAC impersonation plus a real owner token rather than a real non-owner
 >   login. **Explained a few hours after close — Google filters external
->   members out of an internal parent group; see the post-close addendum at
->   the end.** What is still missing is a positive test with a domain user who
->   is only in a team group.
+>   members out of an internal parent group; see the first post-close addendum
+>   at the end.** What is still missing is a positive test with a domain user
+>   who is only in a team group.
 > - C-08 (stretch) was not attempted: the org-level grant it needs is an
 >   undecided governance question.
 > - ADR-0015 §6 asked for both rebuild modes at M2. The parked rebuild ran;
@@ -47,6 +47,9 @@
 > left exactly as written, predictions included — it is the thing the build is
 > compared against, and correcting it after the fact would destroy the only
 > property that makes the comparison worth reading.
+>
+> **ADR-0016's one pre-publication correction is explained in the second
+> post-close addendum at the end.**
 
 ## Test-readiness walk (2026-09-02, before the first build command)
 
@@ -465,20 +468,22 @@ groups-only rule for `gke-security-groups` forbids — not yet cleaned up.
 One multi-agent workflow produced the whole surface above: 4 research spikes,
 9 authoring streams, 2 adversarial reviewers per stream, 9 fixers and 1
 integration pass — **41 agents, 0 errors, ~72 minutes, ~7.8M subagent
-tokens.** The reviewers raised **84 findings, 13 of them blockers**, and all
-84 were fixed before anything touched the cloud.
+tokens** — the workflow's own counters; what its error counter measured was
+not recorded, so it is not a statement about the correctness of what the
+agents produced (noted 2026-09-21). The reviewers raised **84 findings, 13 of
+them blockers**, and all 84 were fixed before anything touched the cloud.
 
-The uncomfortable half is the other column. The live run then found **8
-further defects**, among surprises 3–13 below (the live record counts them
-without naming which eight, so no mapping is asserted here). Two of them are
-worse than "review missed something". One is the Kyverno kind selector: the reviewers
-had recorded the wildcard provider group as **VERIFIED by reading Kyverno's
-source code** ("resolved through discovery to concrete GVRs"), and a live
-probe showed it is written verbatim into the webhook and matches nothing — so
-the reality gate was open, and a raw `DatabaseInstance` applied by hand was
-admitted and created a real Cloud SQL instance. The other is the container
-image: the authoring agent **reported that `docker build` succeeded**, and it
-had not been run in a form that could work.
+The uncomfortable half is the other column. The live run's own record counts
+**8 further defects**, among surprises 3–13 below (the live record counts them
+without naming which eight, so no mapping is asserted here — noted 2026-09-21).
+Two of them are worse than "review missed something". One is the Kyverno kind
+selector: the reviewers had recorded the wildcard provider group as **VERIFIED
+by reading Kyverno's source code** ("resolved through discovery to concrete
+GVRs"), and a live probe showed it is written verbatim into the webhook and
+matches nothing — so the reality gate was open, and a raw `DatabaseInstance`
+applied by hand was admitted and created a real Cloud SQL instance. The other
+is the container image: the authoring agent **reported that `docker build`
+succeeded**, and it had not been run in a form that could work.
 
 ADR-0006's reasoning — an agent's blast radius is everything it can do, so
 agent-produced instructions get a heavier gate — is why this surface got two
@@ -1608,3 +1613,33 @@ bindings, not memberships, and RBAC flipped within the same reconcile — but
 off-boarding a person by removing them from a team group is not instant, and
 the pattern should not imply that it is.
 
+## Post-close addendum (2026-09-21): ADR-0016's pre-publication correction
+
+Added after the entry was closed and merged. This addendum rewrites nothing
+above it except two pointers in the opening banner; ADR-0016 is not edited.
+Two other dated notes landed the same day, in place and marked, under "How it
+was authored, and what the gates caught" — they narrow two attributions, and
+they are not part of this addendum.
+
+An outside reviewer read `git log -- docs/adr/0016-*.md`, saw the only ADR in
+the repo with two commits, and concluded it had been amended seven minutes
+after publication. The timeline, in UTC so the zones do not mislead:
+`d93adc4` wrote the ADR at 12:51:52; `67c4202` rewrote its "Unverified at
+decision time" bullet at 12:58:49, withdrawing an overclaim — the project
+owner's token never tested nested-group inheritance, because he is a direct
+member of every group; `c2c656f` merged PR #7 at 12:59:44, 55 seconds after
+the rewrite. Both commits rode the branch `m2-build-log`, so no version on
+`main` has ever carried the withdrawn text. The seven minutes are between two
+commits on an unmerged branch, not between publication and an amendment.
+
+What the reviewer could not see from `git log` alone: the withdrawn text was
+public on the PR branch, where the withdrawal commit sits beside it with its
+reasoning in the message, and that same commit wrote the withdrawal into this
+entry — above, under C-06's data, "the draft of this entry cited his token as
+[C] evidence that nested groups resolve; that was wrong and is withdrawn
+here."
+
+The rule this repo follows: an ADR is correctable up to its first commit on
+`main`, and the correction is disclosed rather than hidden; after that it is
+superseded, never edited. ADR-0017, when it lands, carries the worked example:
+its status line records the corrections the ADR took before its first commit.

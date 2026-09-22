@@ -1,9 +1,9 @@
 # API Gateway Landscape — 2026 State of the Art
 
 Research digest, 2026-07-28. Motivating question: Gloo worked well in a 2020-era
-fintech platform build — what's the right pick in 2026? All load-bearing claims
-verified against primary sources on 2026-07-28 by a research agent; sources at
-bottom. Ported into this repo 2026-07-29; GCP notes added at port are marked
+platform build — what's the right pick in 2026? All load-bearing claims verified
+against primary sources on 2026-07-28 by a research agent; sources at bottom.
+Ported into this repo 2026-07-29; GCP notes added at port are marked
 [unverified].
 
 ---

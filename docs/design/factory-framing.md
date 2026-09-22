@@ -8,9 +8,9 @@ post, a talk, or an executive review. It ends with the design commitments the
 framing generates, because a good frame is not decoration: it tells you what to
 build.
 
-Origin: two framings first used in 2019 to articulate an infrastructure vision
-at fintech scale — start from personas, and explain automation maturity through
-the levels of autonomous driving. Both survive the agentic era. Each needs
+Origin: two framings first used in 2019 to articulate an infrastructure
+vision — start from personas, and explain automation maturity through the
+levels of autonomous driving. Both survive the agentic era. Each needs
 exactly one update, and the analogy has become *more* accurate, not less: in
 2019 it was a metaphor, because Kubernetes decides nothing novel. Now there is
 an actual driver-like actor making judgment calls — the agent — and the driving

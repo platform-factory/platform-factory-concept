@@ -27,8 +27,10 @@ implementation will be a GitHub org of seven repos (see README topology).
   is always phrased as "a from-scratch, generic pattern: no client or employer
   code, config, or data." Never say the patterns were run in production (the
   factory layer is new, so this is not what ran anywhere), and never name an
-  industry (the pattern is for any business). If unsure whether a detail is
-  generic, it goes in CLAUDE.local.md, not here.
+  industry (the pattern is for any business). The same goes for other
+  companies: never cite a vendor's reference customers or named adopters as a
+  signal for a tool; judge tools on their own properties. If unsure whether a
+  detail is generic, it goes in CLAUDE.local.md, not here.
 - **Research standard:** load-bearing claims verified against primary sources,
   labeled [C] confirmed / [I] inferred; unverified items listed explicitly. Don't
   soften this — it's the repo's credibility.

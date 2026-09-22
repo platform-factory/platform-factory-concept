@@ -50,6 +50,9 @@
 >
 > **ADR-0016's one pre-publication correction is explained in the second
 > post-close addendum at the end.**
+>
+> **What C-03's HELD does and does not cover is set out in the third
+> post-close addendum at the end.**
 
 ## Test-readiness walk (2026-09-02, before the first build command)
 
@@ -1643,3 +1646,58 @@ The rule this repo follows: an ADR is correctable up to its first commit on
 `main`, and the correction is disclosed rather than hidden; after that it is
 superseded, never edited. ADR-0017, when it lands, carries the worked example:
 its status line records the corrections the ADR took before its first commit.
+
+## Post-close addendum (2026-09-21): what C-03's HELD covers
+
+Added after the entry was closed and merged. This addendum rewrites nothing
+above it except one pointer in the opening banner.
+
+The grade above reads "HELD for the kinds M2 composes, with one recorded
+gap," and a reader is entitled to ask which kinds those are, since C-03 as
+registered names them by group — Cloud SQL instance, database and user; GCS
+bucket; service account and IAM bindings; Artifact Registry; Cloud DNS
+records. The answer is in the grade, spread across a paragraph; it belongs
+in one place.
+
+**What was demonstrated.** Seven kinds, created and reconciled by M2's two
+Compositions at namespaced scope on provider-upjet-gcp v3.0.0:
+`RegistryRepository`, `RegistryRepositoryIAMMember`, `ServiceAccount`,
+`ServiceAccountIAMMember`, `ProjectIAMMember`, `DatabaseInstance` and
+`Database`.
+
+**What was not created by hand, and why.** Three of the things C-03 names:
+
+- `sql.User` of an IAM type. It cannot be created on the pinned provider at
+  all — the create path panics (upstream issue #1000, open) — and Cloud SQL
+  rejects a password on an IAM user, so the Composition has no way around
+  it. The user in the build was created out of band and then adopted. This
+  is the "one recorded gap" the grade cell names.
+- GCS bucket and Cloud DNS records. No M2 Composition uses them, so no
+  hands-on create ran. They were **never hands-on created**, which is not
+  the same as never touched: their CRDs were verified Established at both
+  scopes on the live cluster on 2026-08-28, and against the shipped CRDs at
+  tag v3.0.0 on 2026-08-11 — both recorded in the M1 entry, the first under
+  C-03's live half and the second under Research verified. C-03's test asks
+  for a hands-on create, and that half did not run for them.
+
+**Why this is still HELD.** ADR-0008's HELD test is "worked as designed" —
+no design change was needed — and nothing in the design changed here: a
+pinned version has a bug with a known workaround and a known fix path, and
+two kinds simply had no Composition to exercise them yet. HELD is a
+statement about the design surviving contact with the build. It is not a
+statement that every kind the claim names was created, and this addendum is
+here so the grade cannot be read that way.
+
+**Why ADJUSTED would be wrong.** ADJUSTED requires a design change with a
+superseding ADR linked. The only design change in this area is the reality
+gate enumerating provider groups instead of matching them by wildcard, and
+that belongs to C-07, graded ADJUSTED on
+[ADR-0016 §3–4](../adr/0016-what-the-m2-build-changed.md). Borrowing it for
+C-03 would attach a grade to a change C-03 did not make.
+
+**What happens to the carried-forward half.** The grade above carries the
+GCS bucket and Cloud DNS record checks to M3. ADR-0017, when it lands,
+retires the provider those kinds belong to, so no later milestone will run
+them on it. They close at M2b's close, by a dated line in that entry, as
+permanently not-hands-on-tested rather than carrying forward as though a
+future milestone will pick them up.

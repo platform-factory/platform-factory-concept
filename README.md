@@ -117,7 +117,9 @@ milestone status as of M1. The build logs are current; the diagrams are not.
 
 - `docs/design/` — the platform pattern, the knowledge-as-code layer, and the
   factory framing (the personas it serves + the autonomy narrative), in full
-- `docs/adr/` — decision records (the knowledge layer, dogfooded from day one)
+- `docs/adr/` — decision records (the knowledge layer, dogfooded from day one);
+  ADRs are never edited, so [the index](docs/adr/README.md) records what each
+  decision later became
 - `docs/build-log/` — the build-as-experiment method (ADR-0008): the claims
   register (pre-registered 2026-07-31, append-only with dated additions) and
   one graded evidence entry per milestone —

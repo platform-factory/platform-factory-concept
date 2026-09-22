@@ -9,7 +9,11 @@ implementation will be a GitHub org of seven repos (see README topology).
 
 - `docs/design/` — the core design docs (platform pattern, knowledge layer,
   factory framing/articulation)
-- `docs/adr/` — decision records, numbered; ADRs are **superseded, never edited**
+- `docs/adr/` — decision records, numbered; ADRs are **superseded, never
+  edited** once committed to `main` (a correction before that first commit is
+  disclosed rather than hidden — in the ADR's status line or in the linked
+  build-log entry; the index in `docs/adr/README.md` records what each
+  decision later became)
 - `docs/build-log/` — build-as-experiment evidence trail (ADR-0008): the
   claims register is append-only and grades change only via a linked
   build-log entry; every build milestone ends with an entry

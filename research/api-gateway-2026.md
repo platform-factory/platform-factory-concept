@@ -81,7 +81,6 @@ TrafficPolicy/ListenerPolicy CRDs).
 - **Commercial layer:** "Solo Enterprise for kgateway" (2.2.x line): Coraza-based
   WAF (WAFPolicy CRD, OWASP CRS), FIPS images, enterprise policy CRDs, SLAs.
   Support relationship with Solo is resumable, not mandatory.
-- **Fintech signal:** Trust Bank (regulated digital bank) is a public reference.
 - **Risks:** CNCF Sandbox, not yet incubating; maintainership still Solo-heavy;
   Solo's commercial energy has visibly shifted to agentic infrastructure;
   enterprise build (2.2.x) trails OSS (2.4.x).

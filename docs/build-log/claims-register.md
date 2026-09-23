@@ -37,6 +37,13 @@ Grades: **UNTESTED** → **HELD** | **ADJUSTED** (superseding ADR linked) |
 | C-23 | Image pulls ride the Google-API path; internet egress reduces to git (added 2026-08-06) | M1 | **HELD** (2026-08-28) |
 | C-24 | A per-System IAM Condition makes a team's Cloud SQL grants independent between Systems (added 2026-09-17, ADR-0016 §2) | M3 | UNTESTED |
 | C-25 | A provider release with the sql.User fix removes the manual database-user step (added 2026-09-17, ADR-0016 §4) | M4 | UNTESTED |
+| C-26 | The existing tenant files drive the new engine unchanged (added 2026-09-19, ADR-0017 §3) | M2b | UNTESTED |
+| C-27 | Ownership still moves with a YAML edit on the new engine, and a broken naming rule fails loudly (added 2026-09-19, ADR-0017 §10) | M2b | UNTESTED |
+| C-28 | Guardrails replace review without a custom API: a values file only the platform renders (added 2026-09-19, ADR-0017 §4–7 and §9) | M2b | UNTESTED |
+| C-29 | The engine cutover is a rebuild: nothing durable is re-created, and rollback is a rebuild too (added 2026-09-19, ADR-0017 §12) | M2b | UNTESTED |
+| C-30 | The new stack is smaller, measured rather than asserted (added 2026-09-19, ADR-0017) | M2b | UNTESTED |
+| C-31 | The engine runs on narrow custom roles, and what they leave out is the third deletion lock (added 2026-09-21, ADR-0018) | M2b | UNTESTED |
+| C-32 | Rebuild cost is measured, not estimated (added 2026-09-22, ADR-0009 and ADR-0015) | M2b | UNTESTED |
 
 ## M1 — Spine
 
@@ -216,6 +223,222 @@ deleted by a sibling, a gate that matched nothing — were invisible at every
 level the platform reports on, and were found only because the tests read the
 cloud side rather than the object. Pre-registration should ask of every
 remaining claim: what would this test look at if the platform were lying?
+
+## M2b — Engine swap
+
+Added 2026-09-19 from [ADR-0017](../adr/0017-config-connector-engine-platform-rendered-forms.md),
+before any build command for it ran. ADR-0017 retires Crossplane from the
+reference path in favour of Config Connector with platform-rendered Helm
+charts. **No M2 grade changes:** C-05, C-06 and C-07 were graded on Crossplane
+and stay as graded. The claims below are the same questions asked of the new
+engine, with M2's measured numbers as their baselines, plus two questions the
+swap itself raises. C-31 was added on 2026-09-21 from
+[ADR-0018](../adr/0018-engine-permissions-are-a-list-in-platform-roles.md),
+which folds a second decision into this milestone, also before any build
+command ran. C-28 (b) and (b2), C-29 and C-30 were reworded the same day to
+account for it — before this section's first commit and before any build
+command, the only point at which the append-only rule allows it. On
+2026-09-22, from a second outside review and under the same rule, C-28 (b)
+and (b2) and C-29's Data were extended again, with (b)'s "per-System budget"
+renamed "per-System claim limit" to match ADR-0017 §6, and C-31's Data was
+extended; C-32 was added the same day from ADR-0009's cost estimate and ADR-0015's cost
+consequence, also before any build command ran. The claim texts of
+C-01..C-25 are unchanged per that rule; their grade cells may still gain
+scope notes through a linked build-log entry, as C-03's and C-04's already
+have. C-25's subject is removed by ADR-0017 and its grade column is dealt
+with at M2b's close, by a linked build-log entry like any other. C-03's
+carried-forward hands-on checks — a GCS bucket and Cloud DNS records — will
+never run on the provider C-03 names, which ADR-0017 retires, so at M2b's
+close a linked build-log entry of the same kind records them as never
+tested by hand, rather than carrying them to M3.
+
+- **C-26 — The tenant files survive the engine.** (ADR-0017 §3; C-05 asked
+  again, and C-08's idea tested harder than its own test would have)
+  The files in `systems/tenants/` drive the new engine without edit and
+  materialize the same tenant surface; a new tenant is still one file.
+  **Test:** cut over with `systems/tenants/` untouched; then onboard a third
+  tenant with one file. **Data:** bytes changed in existing tenant files
+  (target: zero); objects present in M2's tenant surface and absent now, and
+  the reverse; wall-clock from merge to a running workload (M2 baseline: 4m08s
+  to Ready, about five minutes to a workload).
+- **C-27 — Ownership still moves with a YAML edit.** (ADR-0017 §10; C-06
+  asked again)
+  Changing `spec.owner.team` re-creates the three team-bearing cloud grants
+  through Argo CD apply-and-prune, and the cloud agrees.
+  **Test:** move `svc-hello` between teams while polling the project and
+  repository IAM policies from the cloud side every ten seconds; then
+  deliberately break the naming rule on one member and move again.
+  **Data:** files touched (target: 1); resources re-created (predicted: 3);
+  seconds from merge until the cloud policy shows the new team and not the old
+  (M2 baseline: 1m55s); whether anything reported healthy while the cloud
+  disagreed (M2 baseline: yes, on the first run); whether the broken rule
+  fails loudly or silently (predicted: loudly, as a failed sync).
+- **C-28 — Guardrails replace review without a custom API.** (ADR-0017 §4–7 and §9;
+  C-07 asked again)
+  A `claims.yaml` in the service repo provisions on the golden path; the form
+  is enforced by who renders it rather than by an API type; deletion
+  protection holds.
+  **Test:** (a) PR → usable database, timed, with no out-of-band command;
+  (b) each of these is refused — a wrong region, an oversized request, the
+  cross-field rule, an extra key (`ipv4Enabled: true`), a string crafted to
+  inject YAML, a claim over the per-System claim limit, an unknown key under
+  `environment`, a claim name containing a hyphen, size L with
+  `tier: critical` in a standard-tier System, also when the `claims.yaml`
+  sets `system.tier: critical` (with a tenant file that states
+  `tier: standard` and with one that leaves `tier` out) — and so is a raw
+  `SQLInstance` placed in the tenant's `k8s/`, an Argo CD Application placed there and aimed at the platform's project,
+  with and without `metadata.namespace: argocd`, a Config Connector object in
+  a gated group (`sql`, `iam`, `artifactregistry`) created, edited or deleted
+  with `kubectl` by a team member, and an edit by anyone that removes or
+  changes the abandon annotation on a durable object; (b2) two things
+  predicted *not* to be refused, each recorded: a `claims.yaml` that sets a
+  real platform value (`environment.projectID`, and separately
+  `system.tier: critical`) — `valuesObject` outranks it
+  and the schema sees only the merged values (ADR-0017 §4), so the test is
+  that the rendered output is byte-identical with and without it; and a
+  Config Connector object in an ungated group the identity holds no write
+  permission in (a `StorageBucket`) — admitted by the API server and never
+  actuated. The group is named because "ungated" does not mean "unpermitted"
+  while the broad roles are bound: `roles/cloudsql.admin` also carries a few
+  writes outside Cloud SQL, and `roles/compute.viewer` lets the engine read;
+  (c) remove the entry — the instance survives; restore it — the
+  instance is adopted.
+  **Data:** minutes PR→usable and manual commands (M2 baseline: 17m45s, one);
+  every refusal verbatim from every surface it appears on — the PR check, the
+  claims Application's status, Kyverno — and which surfaces a developer can
+  actually see; anything that admitted; seconds to adopt (M2 baseline: 66).
+- **C-29 — The cutover is a rebuild.** (ADR-0017 §12; ADR-0015's adoption
+  used as the migration mechanism)
+  Switching engines costs one `down` and one `up`, re-creates nothing durable,
+  and is reversible the same way.
+  **Test:** `down` on Crossplane, `up` from the Config Connector branch; then
+  the reverse, once. Both legs run with the engine identity still holding the
+  built-in roles Crossplane's holds. ADR-0018's custom roles are bound too; a
+  desk check before the first leg must show each is a subset of the built-in
+  role it replaces, so that they add nothing (ADR-0018 §4). If it does not,
+  the leg does not start. C-29's data closes with the reverse leg; the return
+  build onto Config Connector belongs to C-31. **Data:** adopted versus
+  re-created for each durable
+  resource (target: all adopted, none re-created); each non-durable resource
+  the new engine could not acquire and what was done about it; seconds any
+  grant was absent from the cloud policy; manual interventions (target: zero);
+  `up` wall-clock (M2 baseline: 35m31s); and whether `postgres` accepts the
+  `<claim>-admin` Secret's value after the forward leg, from one `psql` login
+  (it settles ADR-0017 §8's [I] on `rootPassword` riding in an update).
+- **C-30 — The new stack is smaller.** (ADR-0017 Context — the reason for the
+  swap, made falsifiable)
+  For the same tenant surface, the new engine asks less of the cluster and of
+  the reader.
+  **Test:** count both engines at the same tenant surface, Crossplane from the
+  last M2 cycle and Config Connector after cutover. **Data:** engine pods and
+  their memory; CRDs installed; non-comment lines of recipe, schema and policy;
+  the kinds and concepts a reader must learn to follow one tenant from its file
+  to its cloud resources, listed by name; layer-0 and `platform-roles`
+  resources that exist for the engine's identity. **Prediction, written now
+  and expected to come out mixed:** fewer pods, fewer recipe lines — and more
+  CRDs, by a wide margin. Concepts: still fewer on the new engine, by a
+  smaller margin than the swap alone would give. The count is reported twice
+  — with and without the three things ADR-0018 adds (an eighth repo, the
+  custom role, a second home for Terraform) — and "less of the reader" is
+  falsified if the total with them is not lower than Crossplane's.
+- **C-31 — The engine runs on narrow roles, and what they leave out is the
+  third lock.** (ADR-0018; ADR-0017 §1, §7 and §9; ADR-0015 §1 and §5)
+  After C-29 has run both legs on the permissions Crossplane holds, one
+  `platform-roles` apply made with the cluster down removes the four broad
+  built-in grants. The engine identity then holds four custom roles — 21
+  permissions, each traced to a Config Connector v1.156.0 call, against about
+  270 — plus the read-only `roles/compute.viewer`, unchanged and stated. On
+  those it adopts everything as C-29's forward leg did, onboards and offboards
+  a tenant, provisions a database, and cannot delete a durable resource, edit
+  a role, or grant a project role outside the two-role list.
+  **Test:** (control, first session, broad roles) a raw scratch
+  `ArtifactRegistryRepository` with no abandon annotation — in a scratch
+  namespace that is not a tenant's (no system label, so ADR-0017 §7's gate
+  does not match it; it carries the project annotation), created by the
+  operator with `kubectl` — is created and deleted through Config Connector,
+  and the cloud delete *succeeds* — so the
+  lock test can see a real delete. (desk, before narrowing) each role file is
+  a subset of the built-in role it replaces; the first session's audit log
+  lists the write permissions the engine really used. (desk, after narrowing,
+  no cluster) the project's policy shows exactly five grants for the identity
+  — the four custom roles and `roles/compute.viewer` — and none of the four
+  broad built-in roles; a script acting as the engine passes its
+  must-succeed list and is refused on its must-be-refused list — the four
+  durable deletes on scratch resources, an edit to its own role, a
+  `roles/viewer` grant on the project. (a, return build, must succeed) `up` on
+  Config Connector with every durable resource adopted and none re-created,
+  the parked instance woken, every Application Synced and Healthy, no object
+  with a permission error; a scratch tenant onboarded from one file with one
+  database claim, then offboarded. (b, return build, must be refused by
+  Google) in the same kind of scratch namespace, the Kubernetes objects for a
+  raw scratch registry and a raw scratch database, neither carrying the
+  abandon annotation, are deleted — so the role is the only lock left
+  standing — and the cloud side is read.
+  **Data:** permission counts before and after, from `gcloud iam roles
+  describe`; write permissions seen in the first session's audit log that the
+  files lacked; every refusal verbatim, paired with a cloud-side read (still
+  present, creation time unchanged); the adoption table and `up` wall-clock
+  beside C-29's forward leg; every permission error for the engine identity
+  after the narrowing, verbatim, split into found at the desk and found in
+  the cluster, with the permission that fixed it and whether the error named
+  it; `platform-roles` applies needed after the narrowing (target: zero);
+  what Config Connector does with a delete Google refuses — stuck finalizer
+  or not, the condition's text, whether the namespace hangs, what released
+  it; minutes from a fix's apply until the engine's next call succeeds; grants
+  found on the identity that are not in the repo (target: none); whether the
+  first real project grant through Config Connector passes the condition,
+  which the desk script cannot show; the tenants the first session added or
+  moved, listed beside the adoption table so the comparison is read with
+  them in view; the scratch cloud resources left behind and the `gcloud`
+  deletes a person made to remove them (ADR-0015 §5); and the scratch
+  tenant's name going onto the retired list when its file is removed and
+  coming off after those deletes (ADR-0017 §9).
+  **Prediction, written now:** every refusal holds; one or two permissions are
+  missing on the first try and the desk finds at least one of them; the
+  refused deletes leave their objects stuck until the annotation is added.
+  **Falsified if** the engine identity deletes a durable resource from the
+  cloud; or a resource C-29's forward leg adopted is re-created; or the golden
+  path needs a permission the design forbids (a durable delete, anything
+  under `iam.roles.`, an unconditioned `projects.setIamPolicy`); or the
+  `roles/viewer` grant appears in the project's policy; or the engine's edit
+  to its own role succeeds; or a failure in the return build can neither be
+  tied to a denied call by the engine identity in the audit log nor be
+  reproduced with the four built-in grants restored.
+- **C-32 — Rebuild cost is measured, not estimated.** (ADR-0009's cost
+  estimate, at the end of its Decision — "Session burn rises from near-zero
+  to roughly $0.50/hour while the cluster exists" — and ADR-0015 §4 with its "Stopping is not free"
+  consequence, which promises the cost "is recorded per session when the
+  deferred cost analysis is picked up"; added 2026-09-22)
+  The billing export makes the project's published cost estimate checkable:
+  an M2b session's spend can be read from the export rather than inferred,
+  and a parked day has a number too.
+  **Test:** read the billing export for each M2b session — every cutover leg,
+  the return build, and the narrowing session — and for the parked days
+  between them, keyed to the reference project. Compare against ADR-0009's estimate. No
+  figure is published that the export does not carry; nothing is estimated
+  from memory.
+  **Data:** list-price and net (post-credit) spend per M2b session, with the
+  session's `up` and `down` wall-clock beside it so the hourly rate is
+  derivable; the implied cost per cluster-hour against ADR-0009's roughly
+  $0.50/hour; the parked-instance line items (storage and the private IP,
+  which ADR-0015 says bill while parked) as a cost per parked day; the
+  September baseline the export already holds — 2026-09-01 → 09-21 as read
+  on 2026-09-21 (that day still partial), $17.03 list price,
+  net zero under the trial credit, which covers M2, its close and the M2b
+  design work; and the same spend split by the `system` label the charts put
+  on each instance and registry (ADR-0017 §8), so a System's share is read
+  from the export rather than allocated by hand [I: that those labels reach
+  the billing export rests on secondary sources].
+  **Prediction, written now:** the measured hourly rate for a session with the
+  cluster up lands within the same order of magnitude as ADR-0009's estimate
+  but not on it,
+  because the estimate predates the Cloud SQL instance and the Tailscale
+  subnet router; a parked day costs little but not nothing; and the largest
+  single surprise is a session that was left running, not a rate that is
+  wrong.
+  **Falsified if** the export cannot be tied to a session — no session's spend
+  can be isolated from it — or if a published cost figure still has to come
+  from an estimate after M2b closes.
 
 ## M3 — Approval boundary
 

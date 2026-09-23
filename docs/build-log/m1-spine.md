@@ -9,6 +9,10 @@
 > **Outcome: C-02, C-04 and C-23 HELD; C-01 and C-03 deferred to M2** because
 > neither claim's test can execute at M1 — a scheduling error in the register
 > itself, recorded rather than papered over.
+>
+> **C-02's third data point — actual monthly spend — is settled in the
+> post-close addendum at the end (2026-09-21): unrecoverable for all but M1's
+> last two days, measured from 2026-08-27 on.**
 
 ## Built
 
@@ -977,3 +981,45 @@ milestone tries to close.** Same family as surprise 9, one level up — surprise
   Cloud SQL instances and buckets, which is M2 work by the register's own
   milestone table. Grade at M2 close, when the remaining half can actually
   run.
+
+## Post-close addendum (2026-09-21): C-02's third data point
+
+Added after the entry was closed and merged. This addendum rewrites nothing
+above it except one pointer in the opening banner.
+
+C-02's grade above closes on an open item: actual monthly GCP spend, the
+third thing the register's **Data** list asks for. The entry recorded two
+reasons it was missing — no billing export existed while M1 ran, and the
+export enabled on the last day of the milestone might have been keyed to the
+wrong billing account, because a pre-existing table in the same dataset
+covered a different one. The export was read on 2026-09-21, read-only, and
+both halves now have answers.
+
+The keying was fine. The export table is keyed to the billing account
+`platform-factory-ref` bills to, so the worry recorded above does not apply
+to it. The backfill was not fine. Rows for `platform-factory-ref` begin on
+2026-08-27, the day before the export was enabled — Google delivered one day
+of history, not the "current and previous month" the entry above expected.
+M1 ran from 2026-08-01 to 2026-08-28, so only its last two days fall inside
+the export: 2026-08-27 and 2026-08-28 together cost **$3.17** at list price
+across 1,726 rows. **The first twenty-six days of the M1 window are
+unrecoverable, not outstanding.** No query produces them and none will; the
+entry above was wrong to call the figure a one-query follow-up.
+
+What the export holds for `platform-factory-ref`, at list price and fully
+offset — Free Trial credit on most of it, 100% product discounts on the rest
+— so net zero either way:
+
+| Window | Rows | List-price cost |
+|---|---|---|
+| 2026-08-27 → 08-31 (the last two days of M1 and the gap after it) | 3,364 | **$3.84** |
+| 2026-09-01 → 09-21 (M2, its close, and the M2b design work) | 17,500 | **$17.03** |
+
+The grade stands, and stands on the same two numbers it always did —
+wall-clock and manual interventions, which are what the target in the claim
+is stated in. What changes is the honesty of the open item: the third
+pre-registered data point is permanently unavailable for the first
+twenty-six days of M1, and measured from 2026-08-27 on; the first whole
+month it measures is September. Whether the project carries a measured cost
+claim from here is a question for M2b's registration, not something this
+entry can settle.

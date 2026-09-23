@@ -50,6 +50,12 @@
 >
 > **ADR-0016's one pre-publication correction is explained in the second
 > post-close addendum at the end.**
+>
+> **What C-03's HELD does and does not cover is set out in the third
+> post-close addendum at the end.**
+>
+> **That `svc-hello`'s pull-request claim check never actually validated a
+> claim is recorded in the fourth post-close addendum at the end.**
 
 ## Test-readiness walk (2026-09-02, before the first build command)
 
@@ -1643,3 +1649,104 @@ The rule this repo follows: an ADR is correctable up to its first commit on
 `main`, and the correction is disclosed rather than hidden; after that it is
 superseded, never edited. ADR-0017, when it lands, carries the worked example:
 its status line records the corrections the ADR took before its first commit.
+
+## Post-close addendum (2026-09-21): what C-03's HELD covers
+
+Added after the entry was closed and merged. This addendum rewrites nothing
+above it except one pointer in the opening banner.
+
+The grade above reads "HELD for the kinds M2 composes, with one recorded
+gap," and a reader is entitled to ask which kinds those are, since C-03 as
+registered names them by group — Cloud SQL instance, database and user; GCS
+bucket; service account and IAM bindings; Artifact Registry; Cloud DNS
+records. The answer is in the grade, spread across a paragraph; it belongs
+in one place.
+
+**What was demonstrated.** Seven kinds, created and reconciled by M2's two
+Compositions at namespaced scope on provider-upjet-gcp v3.0.0:
+`RegistryRepository`, `RegistryRepositoryIAMMember`, `ServiceAccount`,
+`ServiceAccountIAMMember`, `ProjectIAMMember`, `DatabaseInstance` and
+`Database`.
+
+**What was not created by hand, and why.** Three of the things C-03 names:
+
+- `sql.User` of an IAM type. It cannot be created on the pinned provider at
+  all — the create path panics (upstream issue #1000, open) — and Cloud SQL
+  rejects a password on an IAM user, so the Composition has no way around
+  it. The user in the build was created out of band and then adopted. This
+  is the "one recorded gap" the grade above names.
+- GCS bucket and Cloud DNS records. No M2 Composition uses them, so no
+  hands-on create ran. They were **never hands-on created**, which is not
+  the same as never touched: their CRDs were verified Established at both
+  scopes on the live cluster on 2026-08-28, and against the shipped CRDs at
+  tag v3.0.0 on 2026-08-11 — both recorded in the M1 entry, the first under
+  C-03's live half and the second under Research verified. C-03's test asks
+  for a hands-on create, and that half did not run for them.
+
+**Why this is still HELD.** ADR-0008's HELD test is "worked as designed" —
+no design change was needed — and nothing in the design changed here: a
+pinned version has a bug with a known workaround and a known fix path, and
+two kinds simply had no Composition to exercise them yet. HELD is a
+statement about the design surviving contact with the build. It is not a
+statement that every kind the claim names was created, and this addendum is
+here so the grade cannot be read that way.
+
+**Why ADJUSTED would be wrong.** ADJUSTED requires a design change with a
+superseding ADR linked. The only design change in this area is the reality
+gate enumerating provider groups instead of matching them by wildcard, and
+that belongs to C-07, graded ADJUSTED on
+[ADR-0016 §3–4](../adr/0016-what-the-m2-build-changed.md). Borrowing it for
+C-03 would attach a grade to a change C-03 did not make.
+
+(Added 2026-09-23, before this addendum reached `main`.) C-07's grade line
+gives two reasons for ADJUSTED: the gate change, and a dependence on a
+provider fix. The second is this same `sql.User` bug. Only the first is a
+design change in ADR-0008's sense; ADR-0016 §4, which records the bug, is
+headed "The rest of ADR-0013 stands, with three caveats the build made
+concrete", and the bug is the first of those caveats. The bug appears in
+both grades as a recorded cost. It is the gate change alone that makes C-07
+ADJUSTED. For the same reason, the bug does not make C-03 ADJUSTED.
+
+**What happens to the carried-forward half.** The grade above carries the
+GCS bucket and Cloud DNS record checks to M3. ADR-0017, when it lands,
+retires the provider those kinds belong to, so no later milestone will run
+them on it. They close at M2b's close, by a dated line in that entry, as
+permanently not-hands-on-tested rather than carrying forward as though a
+future milestone will pick them up.
+
+## Post-close addendum (2026-09-23): the pull-request claim check never validated a claim
+
+Added after the entry was closed and merged. This addendum rewrites nothing
+above it except one pointer in the opening banner.
+
+ADR-0014's Context lists the pull-request check first of the three places a
+bad claim can be refused, and calls it "the only gate that fires *before
+merge*". In `svc-hello` that check is the `claim` job in
+`.github/workflows/validate.yml`, and it has never validated a claim. It is
+written to fetch the XRDs with a secret, `PLATFORM_CONFIG_TOKEN`, and to skip
+when that secret is absent, although `platform-config` has been public since
+the org was set up on 2026-08-01 and can be read without one. No such secret
+exists at the repo or the org, and none was present in any run. So in all 23
+runs to date (12 on pull requests, 11 on pushes to `main`; the latest is run
+35684747124, 2026-09-22 03:52 UTC, read 2026-09-23) the job printed a notice,
+skipped its fetch, install and validate steps, and reported success.
+
+That includes svc-hello PR #5, the Argo CD test for C-07(b) above: its claim
+check reported success at 11:39:32, the second the PR merged, with those
+three steps skipped. Even with the secret it would not have caught that
+claim, because the job validates only `k8s/database.yaml` and never reads a
+file such as `k8s/denied-region.yaml`. It is also marked `continue-on-error`
+and is not a required check on `main`, so even working it could flag a bad
+claim but not refuse one.
+
+So the offline-CLI messages C-07(b) records above came from running
+`crossplane resource validate` by hand (v2.5.0; the job pins v2.3.4), which
+ADR-0014's Consequences allowed for M2 ("it may be run by hand and recorded
+as such"). They show what a validation against the XRD says, from a newer
+CLI than the job pins, not that the pull-request check ever said it. The
+grade does not rest on it: C-07's test (b) asks for a denial at admission,
+and the API server gave one.
+
+M2b replaces the job with a `helm template` render of the platform's chart
+(ADR-0017 §6); since `platform-config` is public, that render needs no secret
+either.

@@ -13,8 +13,8 @@ Grades: **UNTESTED** → **HELD** | **ADJUSTED** (superseding ADR linked) |
 | ID | Claim (short) | Milestone | Grade |
 |----|---------------|-----------|-------|
 | C-01 | Terraform ends at layer 0 | M1 | **ADJUSTED** (2026-09-17, ADR-0016 §7) — deferred from M1 |
-| C-02 | Tear-down/rebuild is cheap enough to run between sessions | M1 | **HELD** (2026-08-28) |
-| C-03 | provider-upjet-gcp covers the kinds the Compositions need | M1 | **HELD** for the kinds M2 composes, one recorded gap (2026-09-17) — deferred from M1 |
+| C-02 | Tear-down/rebuild is cheap enough to run between sessions | M1 | **HELD** on wall-clock and interventions (2026-08-28); the pre-registered spend figure exists only from 2026-08-27, so it is unrecoverable for all but M1's last two days (scope recorded 2026-09-21) |
+| C-03 | provider-upjet-gcp covers the kinds the Compositions need | M1 | **HELD** for the kinds M2 composes: seven created and reconciled, one create-path gap (IAM `sql.User`); two kinds C-03 names that M2 does not compose (GCS bucket, Cloud DNS records) never hands-on created (2026-09-17; scope recorded 2026-09-21) — deferred from M1 |
 | C-04 | One Argo app-of-apps can own the whole cluster surface | M1 | **HELD** for the M1 surface (2026-08-28) |
 | C-05 | One YAML per tenant materializes the full tenant surface | M2 | **HELD** (2026-09-17) |
 | C-06 | Ownership moves with a YAML edit, no re-plumbing | M2 | **ADJUSTED** (2026-09-17, ADR-0016 §1–2) |
@@ -251,6 +251,14 @@ carried-forward hands-on checks — a GCS bucket and Cloud DNS records — will
 never run on the provider C-03 names, which ADR-0017 retires, so at M2b's
 close a linked build-log entry of the same kind records them as never
 tested by hand, rather than carrying them to M3.
+
+On 2026-09-23, C-02's grade cell gained a scope note the same way, for its
+spend data point, and C-03's was made exact about which kinds it covers. Both
+rest on post-close addenda dated 2026-09-21:
+[C-02's third data point](m1-spine.md#post-close-addendum-2026-09-21-c-02s-third-data-point)
+in the M1 entry, and
+[what C-03's HELD covers](m2-paved-road.md#post-close-addendum-2026-09-21-what-c-03s-held-covers)
+in the M2 entry. No claim text and no grade changed.
 
 - **C-26 — The tenant files survive the engine.** (ADR-0017 §3; C-05 asked
   again, and C-08's idea tested harder than its own test would have)

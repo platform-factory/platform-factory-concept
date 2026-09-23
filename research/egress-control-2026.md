@@ -217,6 +217,42 @@ This repo's reference cloud is GCP (ADR-0005). Verify at build:
   default. Google ships an `FQDNNetworkPolicy` CRD for domain-based egress;
   availability/tier to confirm (may require GKE Enterprise rather than
   Standard-tier GKE).
+
+  **Correction (2026-09-23): "there by default" holds only on Autopilot.**
+  The first sentence above says "the eBPF datapath is there by default".
+  That matters because a Kubernetes NetworkPolicy, and the FQDN egress
+  policy the claims register tests as C-14 in M3, only takes effect on a
+  cluster that runs a network plugin to enforce it. Checked against
+  Google's GKE docs on 2026-09-23:
+
+  - **[C]** Dataplane V2 is on by default only for new **Autopilot**
+    clusters. On **Standard**, the mode the reference cluster runs in, it is
+    chosen when the cluster is created: "GKE Dataplane V2 can only be
+    enabled when creating a new cluster. Existing clusters cannot be
+    upgraded to use GKE Dataplane V2." (GKE docs, "GKE Dataplane V2",
+    Limitations.) In Terraform's `google_container_cluster` the setting is
+    `datapath_provider = "ADVANCED_DATAPATH"`; left unset, it defaults to
+    `LEGACY_DATAPATH` (Terraform google provider docs).
+  - **[C]** It is off on the reference cluster. platform-bootstrap's
+    `layers/2-cluster/gke.tf` (main as of 2026-09-23, `c64cc5a`) sets no
+    `datapath_provider` and no `network_policy` block, and Google says "If
+    no network plugin is configured, network policies aren't enforced"
+    (GKE docs, "Control communication between Pods and Services using
+    network policies"). So a NetworkPolicy applied to a cluster built from
+    this code is accepted and enforced by nothing. That is read from the
+    code and Google's docs; it was not tried on a running cluster.
+  - **[C]** Dataplane V2 alone does not switch on FQDN policy. The
+    `FQDNNetworkPolicy` resource also needs the cluster flag
+    `--enable-fqdn-network-policy` (Terraform `enable_fqdn_network_policy`),
+    which installs its CRDs. Unlike Dataplane V2, this flag can be turned on
+    for an existing cluster; on Standard, the Dataplane V2 controller that
+    runs on each node (`anetd`) then needs a restart (GKE docs, "Control Pod
+    egress traffic using FQDN network policies", Requirements and Enable
+    sections).
+
+  Turning both on in `platform-bootstrap`'s layer 2 is planned for M3, before
+  C-14 is tested. This note does not settle the tier question above; that
+  stays with C-14.
 - Alternative: full Cilium OSS on GKE Standard (own-the-CNI trade, as on AWS).
 - Perimeter analogs: Cloud DNS response policies / DNS policies for the
   resolver layer; Secure Web Proxy or NGFW for egress inspection.

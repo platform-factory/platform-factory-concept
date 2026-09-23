@@ -11,12 +11,13 @@ owners, breaks when the world changes, and therefore needs CI and a test suite.
 The approval boundary applies to knowledge too.
 
 The anti-pattern this replaces: the ingest-everything central brain — point a
-search index or an LLM at every doc, wiki, and Slack channel and hope. That
-category fails on stale content: the index can't tell current from obsolete, so
-answers regress to confidently wrong. Curated, versioned, owner-gated knowledge
-is the category that works; the market has converged the same way (commercial
-skills-registry products with versioning, policy gating, and evals — "evals are
-to skills what unit tests are to code").
+search index or an LLM at every doc, wiki, and Slack channel and hope. This
+design's position is that such an index cannot tell current from obsolete, so
+its answers regress to confidently wrong, and that curated, versioned,
+owner-gated knowledge holds up better. That is a bet, not a measured result:
+claim C-22 in the build log's claims register tests whether the curated
+approach works as CI (at M4), and no test in this repo compares it yet with
+broad retrieval, or with the two used together.
 
 ## Lifecycle
 
@@ -58,8 +59,11 @@ describes.** Hybrid layout:
 
 - **`platform-knowledge` (central, its own repo).** Config repos have few
   approvers, heavy review, and deploy blast radius; knowledge has many
-  contributors, light review, and zero deploy risk — the approval-boundary rule
-  itself says these are different repos. Structure:
+  contributors, and the files agents obey or execute carry the agents' blast
+  radius, so ADR-0006 gates it by folder: security plus platform approve
+  `standards/**`, platform approves `skills/**`, and `questions/**` and `adr/**`
+  keep light review. The approval-boundary rule itself says these are different
+  repos. Structure:
 
   ```
   platform-knowledge/

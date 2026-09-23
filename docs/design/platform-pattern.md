@@ -78,6 +78,46 @@ and an Artifact Registry prefix. Two properties matter:
   ultimately maps to a namespace or to a whole cloud project is absorbed by the
   Composition, not the developer-facing schema.
 
+## The tenant model
+
+*Added 2026-09-23.* A tenant is a System, one deployable unit with its own
+namespace (ADR-0012), owned by a team inside one company. Trust runs
+differently in the two directions. *Toward the platform*, a tenant's input is
+untrusted: a claim, a manifest in `k8s/` or a `kubectl` call must not widen
+what the platform grants, which is why the schema, the AppProject and Kyverno
+are written as security boundaries (ADR-0017 §3–7; C-28 (b), not yet run,
+tests each one). *Between tenants*, the model is cooperative: the namespace
+boundary (quota, RBAC, AppProject and, from M3, a default-deny network policy
+and Pod Security `baseline`) stops accidents and noisy neighbours, not an
+attacker who already runs code in another tenant's namespace. Today the
+reference cluster runs no network policy plugin, so no NetworkPolicy is
+enforced yet [C, `platform-bootstrap` `gke.tf` and GKE's network policy doc,
+2026-09-23]. Hostile-tenant isolation is not claimed. It would need
+cluster-wide network rules a tenant cannot override, a platform-written role
+instead of `admin` (the alternative ADR-0017 §7 set aside), and `restricted`
+Pod Security, and it is not to be inferred from namespace separation.
+
+Three gaps in that picture are open today. They are accepted under the
+cooperative model, and named here so nobody copies the pattern assuming
+otherwise. A team's built-in `admin` role can create RoleBindings in its own
+namespace [C, Kubernetes RBAC doc, 2026-09-23]. Kubernetes refuses a binding
+that grants more than the granter holds, so a team cannot pass on more than
+`admin` there, but it can pass that to people or service accounts the platform
+never approved: the AppProject refuses RBAC objects that come through git, and
+a `kubectl` call does not pass through it. Every member of the team can read
+the `<claim>-admin` superuser password (ADR-0013 §3), and nothing changes it
+when a System moves to another team. And a team can publish a `LoadBalancer`
+or `NodePort` Service or an `Ingress` today without security review: its
+AppProject does not refuse them, `admin` allows them, and the edge model's
+reality gate for them (C-11) is an M3 claim, not yet built. A `LoadBalancer`
+Service with no annotation or load balancer class gets a load balancer
+reachable from the internet [C, GKE "About LoadBalancer Services" doc,
+2026-09-23; not tried on the reference cluster]. The reference build's two
+tenant services are both `ClusterIP`, so nothing is exposed this way today. M3
+closes the third gap with a Kyverno rule, the reality gate C-11 tests, which
+lands with the gateway (C-13) so a team always has an approved way to expose a
+service, and revisits the first two.
+
 ## The edge model
 
 All routes — external *and* internal — live in `edge-config`. Internal routes in a
@@ -135,7 +175,8 @@ propagate-mechanically:
 | Role | GCP | (AWS equivalent, for the portability story) |
 |---|---|---|
 | Cluster | GKE | EKS |
-| Tenant isolation unit | GCP project per env | AWS account per env |
+| Environment isolation unit | GCP project per env | AWS account per env |
+| Tenant (System) boundary | Namespace in the env's project (ADR-0012); a project per System is the alternate C-08 tests | Namespace in the env's account; an account per System is the alternate |
 | Pod → cloud identity | Workload Identity Federation | EKS Pod Identity / IRSA |
 | Registry | Artifact Registry | ECR |
 | Relational DB | Cloud SQL | RDS |
@@ -143,6 +184,13 @@ propagate-mechanically:
 | DNS | Cloud DNS (+ Cloudflare public edge) | Route 53 |
 | Edge WAF | Cloud Armor | AWS WAF |
 | Crossplane providers | provider-upjet-gcp family | provider-upjet-aws family |
+
+*Corrected 2026-09-23.* The environment and tenant rows were one row, "Tenant
+isolation unit: GCP project per env", which is how ADR-0005 (July 2026) still
+words it. ADR-0012 later made each System's own namespace the tenant boundary,
+so the row is now split: the project isolates environments, and the namespace
+separates tenants. ADR-0005 is never edited, so its line stands as written;
+this table follows ADR-0012.
 
 The Crossplane research in `research/crossplane-v2-2026.md` was verified against
 the AWS provider family; the GCP family follows the same Upjet pattern — kind

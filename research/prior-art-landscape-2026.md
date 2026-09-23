@@ -14,19 +14,98 @@ sources, but not adversarially voted. [C] confirmed against a primary source
 (URL or source named inline), [I] inferred; unverified items flagged inline and
 collected at the end.
 
+**Correction (2026-09-23).** A second outside review, and a check of its
+findings, showed that several "nobody does this" statements below were wrong
+as worded: some were too broad, and some judged the design per agent when it
+works per change class. They are rewritten in place, each marked
+"(corrected 2026-09-23, see note)". The original wording, quoted exactly:
+
+- TL;DR 1: "**Every pillar has respected prior art validating it at the
+  concept level; the central mechanism has none.** Nobody ships earned
+  per-agent autonomy — promotion/demotion driven by an agent's own track
+  record, enforced in the merge path. Scorecards in this space grade
+  *services and teams*, never agents. Approval evidence everywhere attaches to
+  *changes* for humans, never to an agent's standing. Nobody uses repo
+  topology as the approval boundary (boundaries live in portal RBAC and tool
+  policies). The approval packet as a first-class merge artifact is
+  unclaimed. [C by absence — searched in this scan and independently in the
+  2026-07-30 approval-packet digest]"
+- Part 6, the white-space summary: "**White space confirmed by this
+  sweep [I]:** nobody ships earned per-agent autonomy; nobody uses repo
+  topology as the approval boundary; scorecards grade services, never
+  agents; the approval packet as a first-class merge artifact is unclaimed."
+- Part 6, on Akuity Intelligence: "the only shipped product attaching agents
+  to a GitOps *promotion* pipeline".
+- Part 7: "Nothing open-source occupies the layer this repo does —
+  opinionated topology + approval boundaries + governed knowledge + earned
+  autonomy." and "the open-source world has all the parts and no assembly
+  instructions; an Apache-2.0 pattern plus reference implementation is the
+  only neutral thing that can sit in that layer. The parts exist; the pattern
+  doesn't."
+
+What was wrong, and what replaces it:
+
+1. **Repo topology as a boundary has prior art.** Flux's guide to structuring
+   repositories (https://fluxcd.io/flux/guides/repository-structure/, read
+   2026-09-23) describes a repository per environment, so that an
+   organization can "grant access to a subset of team members while allowing
+   everyone to clone staging and open pull requests"; describes a platform
+   admin team's repository apart from the dev teams' own, with
+   `fluxcd/flux2-multi-tenancy` as the worked example; and says promotion "is
+   gated by PR reviews and end-to-end testing" [C]. So "nobody" was wrong, and
+   so was "boundaries live in portal RBAC and tool policies". The guide does
+   not state a rule like ADR-0001's, which moves a change out of the team's
+   repo only when someone else must approve it [C]. This design's
+   contribution is now stated positively instead: that one rule, applied
+   across edge, tenants, knowledge and agent autonomy, with the design's
+   claims graded against evidence (ADR-0008).
+2. **"Per-agent" was the wrong target.** ADR-0007 attaches trust to a change
+   class, never to an agent, so the comparison that matters is per class.
+   There the nearest neighbors are Renovate and Dependabot. In both, a person
+   writes the automerge rule per update type (for Dependabot, in a GitHub
+   Actions workflow), and Renovate's Merge Confidence scores an update from
+   data across Renovate's users, not from the repository's own record
+   (approval-packet digest, Part 3; Renovate and GitHub docs re-read
+   2026-09-23) [C]. The scorecard and approval-evidence statements had the
+   same wrong target and are dropped.
+3. **Some statements read as universal.** One search cannot show that
+   nothing exists. For Part 7 it supports something narrower: an assembled
+   open-source pattern combining the four pieces was not found as of
+   2026-07-31. Part 6's "only shipped product" is narrowed the same way.
+
+Every absence tag now reads [not found in this search, 2026-07-31]. The
+originals were "[C by absence — searched in this scan and independently in
+the 2026-07-30 approval-packet digest]" (TL;DR 1), "[I]" (Part 6's
+white-space summary) and "searched, none found" (Open / unverified). Read
+any other absence claim here the same way. The standing caveat that closed
+Part 7 now sits under TL;DR 1, next to the claims it qualifies; where it
+quoted the old wording, "nothing found as of 2026-07-31", it now quotes the
+new tag.
+
 ---
 
 ## TL;DR
 
-1. **Every pillar has respected prior art validating it at the concept level;
-   the central mechanism has none.** Nobody ships earned per-agent autonomy —
-   promotion/demotion driven by an agent's own track record, enforced in the
-   merge path. Scorecards in this space grade *services and teams*, never
-   agents. Approval evidence everywhere attaches to *changes* for humans, never
-   to an agent's standing. Nobody uses repo topology as the approval boundary
-   (boundaries live in portal RBAC and tool policies). The approval packet as a
-   first-class merge artifact is unclaimed. [C by absence — searched in this
-   scan and independently in the 2026-07-30 approval-packet digest]
+1. **Every pillar has respected prior art at the concept level, repo topology
+   included; what this design adds is ADR-0001's approver rule, applied across
+   edge, tenants, knowledge and agent autonomy, with graded evidence.** Flux's
+   repository-structure guide already uses repositories as access and
+   ownership boundaries: a repository per environment, so access to the most
+   sensitive one can be limited to part of the team, and a platform admin
+   team's repository apart from the dev teams' own
+   (`fluxcd/flux2-multi-tenancy` is its worked example), with promotion gated
+   by pull-request review and end-to-end testing [C]. It does not state a rule
+   like ADR-0001's, which moves a change out of the team's repo only when
+   someone else must approve it [C]. The design's claims are graded against
+   evidence (ADR-0008). Autonomy attaches to a change class, never to an agent
+   (ADR-0007); per class, the nearest neighbors are Renovate and Dependabot,
+   where a person writes the automerge rule per update type (approval-packet
+   digest, Part 3) [C]. The approval packet as a first-class merge artifact is
+   [not found in this search, 2026-07-31]. (corrected 2026-09-23, see note)
+
+   Standing caveat: "not found in this search, 2026-07-31" in a fast-moving
+   space is evidence of absence only as of that date — re-run the currency
+   check immediately before publishing.
 2. **Nearest open-source neighbor: kagent** (CNCF Sandbox, from the Istio
    founders at Solo.io). Independently converges on our core loop — "The agent
    files the GitOps PR; your existing approvals do the rest" — and ships
@@ -56,7 +135,7 @@ collected at the end.
 7. **Naming: "software factory" is contested, not burned — and "platform
    factory" is effectively unencumbered in our space.** The DoD literature's
    own succession narrative is factory → platform, which the name can be
-   positioned as synthesizing. Exact-name collisions are a payments startup, a
+   positioned as synthesizing. Exact-name collisions are a US startup, a
    UK dev shop, and two dead repos; trademark register unchecked.
    [C, single-pass]
 8. **Closest shipped collisions to track:** Akuity Intelligence (agents on
@@ -354,12 +433,12 @@ Network, 2025-09-02
   any agent mark its own homework." [C]
 
 **Exact-name collision check ("platform factory"):** outside our space
-entirely — Platform Factory, Inc. (platformfactory.io, a US payments startup),
+entirely — Platform Factory, Inc. (platformfactory.io, a US startup),
 platformfactory.co.uk (UK dev shop), One Platform Factory (consultancy). On
 GitHub, only three exact `platform-factory` repos exist: two dead zero-star
 repos and ours. A targeted search in the kubernetes/GitOps/platform-engineering
 space returned zero exact-term usage. **US trademark status is unchecked** —
-the USPTO query failed; the payments company is the main encumbrance datapoint.
+the USPTO query failed; the US startup is the main encumbrance datapoint.
 [C, single-pass]
 
 **Verdict [I]:** contested, not burned — and splitting in two (a government
@@ -411,8 +490,9 @@ open, measurable pattern.
 
 - **Akuity Intelligence** (Argo CD co-creator Alexander Matyushentsev, Akuity
   blog "Beyond Dashboards: AI Agents for GitOps Operations," 2026-02-24) — the
-  only shipped product attaching agents to a GitOps *promotion* pipeline
-  (managed Argo CD + Kargo). Three agents: Deployment Advisor, On-Call Agent
+  only shipped product this search found attaching agents to a GitOps
+  *promotion* pipeline (managed Argo CD + Kargo; corrected 2026-09-23, see
+  note). Three agents: Deployment Advisor, On-Call Agent
   (runbook-governed), and **Promotion Advisor**, which before a Kargo
   promotion will "Enumerate all commits associated with the release...
   Analyze commit messages and code diffs... Produce[] a high-level summary and
@@ -470,10 +550,14 @@ open, measurable pattern.
   Engineers" / "Agentic Development Platforms" certifications — the community
   org is institutionalizing the category. [C]
 
-**White space confirmed by this sweep [I]:** nobody ships earned per-agent
-autonomy; nobody uses repo topology as the approval boundary; scorecards grade
-services, never agents; the approval packet as a first-class merge artifact is
-unclaimed.
+**White space:** repository topology as an access and ownership boundary is
+prior art (Flux's repository-structure guide; see TL;DR 1) [C]. What this
+design adds is ADR-0001's approver rule applied across edge, tenants,
+knowledge and agent autonomy. Autonomy here is per change class, and the
+per-class neighbors are Renovate and Dependabot, where a person writes the
+automerge rule per update type [C]. The approval packet as a first-class
+merge artifact is [not found in this search, 2026-07-31]. (corrected
+2026-09-23, see note)
 
 ## Part 7 — Positioning synthesis [I]
 
@@ -491,18 +575,18 @@ How the pieces read together (synthesis, not source claims):
   itself open source; the agent layer on top is the hosted part.
 - **Open source supplies components, not an assembled pattern:** kagent
   (agent runtime), Backstage (knowledge surface), Kargo/Argo (promotion and
-  GitOps), Kyverno/Sigstore/in-toto (evidence and enforcement). Nothing
-  open-source occupies the layer this repo does — opinionated topology +
-  approval boundaries + governed knowledge + earned autonomy. Nearest
-  conceptual repos found: a 3-star Red Hat demo and a 4-star experiment.
+  GitOps), Kyverno/Sigstore/in-toto (evidence and enforcement). An assembled
+  open-source pattern for the layer this repo occupies — opinionated topology +
+  approval boundaries + governed knowledge + per-class earned autonomy — is
+  [not found in this search, 2026-07-31]; Flux's repository-structure guide is
+  prior art for the topology piece (TL;DR 1). (corrected 2026-09-23, see note)
+  Nearest conceptual repos found: a 3-star Red Hat demo and a 4-star
+  experiment.
 - **The launch-post syllogism this supports:** commercial products validate
-  demand for agent governance; the open-source world has all the parts and no
-  assembly instructions; an Apache-2.0 pattern plus reference implementation
-  is the only neutral thing that can sit in that layer. The parts exist; the
-  pattern doesn't.
-- Standing caveat: "nothing found as of 2026-07-31" in a fast-moving space is
-  evidence of absence only as of that date — re-run the currency check
-  immediately before publishing.
+  demand for agent governance; open source has the parts, but an assembled
+  open pattern is [not found in this search, 2026-07-31]; an Apache-2.0
+  pattern plus reference implementation is a neutral thing that can sit in
+  that layer. (corrected 2026-09-23, see note)
 
 ## Do not cite
 
@@ -516,7 +600,7 @@ How the pieces read together (synthesis, not source claims):
 
 ## Open / unverified
 
-- US trademark status of "Platform Factory" (USPTO query failed; a payments
+- US trademark status of "Platform Factory" (USPTO query failed; a US
   company operates as Platform Factory, Inc. at platformfactory.io).
 - Backstage 1.43 scoped short-lived MCP token mechanics (claimed in a
   low-authority aggregator; plugin existence verified, version/mechanics not).
@@ -524,6 +608,6 @@ How the pieces read together (synthesis, not source claims):
 - OpenChoreo module maturity (names only, CNCF Sandbox).
 - Honk (Spotify) mechanics beyond the one interview.
 - No production deployment has published results on rubber-stamping
-  countermeasures (Part 3b) — searched, none found.
+  countermeasures (Part 3b) [not found in this search, 2026-07-31].
 - Several sources are under six months old; re-verify currency immediately
   before the launch blog post cites any of them.

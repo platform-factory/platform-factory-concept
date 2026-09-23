@@ -3,7 +3,7 @@
 Public repo (Apache-2.0): an opinionated developer-platform pattern (GitOps
 control plane, approval-boundary repo topology, knowledge-as-code layer) with a
 GCP reference implementation. This working repo is the design seed; the running
-implementation will be a GitHub org of seven repos (see README topology).
+implementation is the `platform-factory` GitHub org (see README topology).
 
 ## Layout
 

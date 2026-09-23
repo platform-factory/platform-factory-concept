@@ -6,8 +6,8 @@ a new ADR that supersedes it (`CLAUDE.md`, and ADR-0008: "existing claims are
 never reworded or deleted — the same discipline as 'ADRs are superseded,
 never edited.'"). Before that first commit an ADR is still correctable, and
 the correction is disclosed rather than hidden: ADR-0017's status line is the
-worked example, recording the two corrections it took before it was
-committed. The rule keeps the record honest and makes it useless as a status
+worked example, recording the three dated rounds of edits it took before
+its first commit. The rule keeps the record honest and makes it useless as a status
 page: nothing in ADR-0012 tells you that ADR-0016 changed its count, because
 ADR-0012 was not allowed to learn it.
 
@@ -32,8 +32,9 @@ superseding it.
 | [ADR-0003](0003-database-claims-in-service-repo.md) | Accepted · July 2026 | Refined for GCP — the credential path it left open | [ADR-0013](0013-database-credentials-are-iam-identities.md) |
 | [ADR-0003](0003-database-claims-in-service-repo.md) | Accepted · July 2026 | Mechanism replaced; the decision stands | [ADR-0017](0017-config-connector-engine-platform-rendered-forms.md) |
 | [ADR-0005](0005-gcp-crossplane-reference-implementation.md) | Accepted · July 2026 | Second decision (Crossplane as the composition layer) and third consequence superseded | [ADR-0017](0017-config-connector-engine-platform-rendered-forms.md) |
-| [ADR-0009](0009-corp-real-posture-over-cost.md) | Accepted · August 2026 | Access half superseded (2026-08-22); the site-to-site VPN and the "private endpoint once the VPN is live" were never built | [ADR-0011](0011-identity-gated-access-over-network-perimeter.md) |
+| [ADR-0009](0009-corp-real-posture-over-cost.md) | Accepted · August 2026 | Access half superseded (decided 2026-08-20 per the M1 log's surprise 12; committed 2026-08-22); the site-to-site VPN and the "private endpoint once the VPN is live" were never built | [ADR-0011](0011-identity-gated-access-over-network-perimeter.md) |
 | [ADR-0010](0010-image-plane-through-artifact-registry.md) | Accepted · August 2026 | The exception to its first decision that ADR-0013 §4 opened is widened | [ADR-0017](0017-config-connector-engine-platform-rendered-forms.md) |
+| [ADR-0012](0012-system-is-the-unit-team-is-a-field.md) §1 | Accepted · September 2026 | Reserved System names added: a System may not end in `-system` or `-claims`, or take the name of a namespace the platform or GKE uses (including any starting `kube-`, `gke-`, `gmp-` or `cnrm-`), a platform Argo CD Application, or a Google service account or Artifact Registry repository the platform's Terraform creates | [ADR-0017 §6](0017-config-connector-engine-platform-rendered-forms.md) |
 | [ADR-0012](0012-system-is-the-unit-team-is-a-field.md) §4 | Accepted · September 2026 | Count and mechanism superseded | [ADR-0016 §1](0016-what-the-m2-build-changed.md) |
 | [ADR-0012](0012-system-is-the-unit-team-is-a-field.md) §5 | Accepted · September 2026 | Contradicted, not superseded: "A team move therefore touches no cloud IAM" against the six bound things and three re-created IAM members recorded there | [ADR-0016 §1](0016-what-the-m2-build-changed.md) |
 | [ADR-0012](0012-system-is-the-unit-team-is-a-field.md) §3, §6 | Accepted · September 2026 | Mechanism replaced | [ADR-0017](0017-config-connector-engine-platform-rendered-forms.md) |
@@ -43,9 +44,12 @@ superseding it.
 | [ADR-0013](0013-database-credentials-are-iam-identities.md) §6 | Accepted · September 2026 | Its two built-in role names superseded for the Config Connector identity, from apply B; the two-role IAM Condition is kept | [ADR-0018](0018-engine-permissions-are-a-list-in-platform-roles.md) |
 | [ADR-0014](0014-schema-denies-first-kyverno-covers-the-rest.md) §3 | Accepted · September 2026 | Group wildcards superseded by an enumerated reality gate | [ADR-0016 §3](0016-what-the-m2-build-changed.md) |
 | [ADR-0014](0014-schema-denies-first-kyverno-covers-the-rest.md) §1–4 | Accepted · September 2026 | Mechanism replaced | [ADR-0017](0017-config-connector-engine-platform-rendered-forms.md) |
+| [ADR-0014](0014-schema-denies-first-kyverno-covers-the-rest.md) §2 | Accepted · September 2026 | The size-L rule also requires the System's tier to be `critical`, not only the claim's | [ADR-0017 §6](0017-config-connector-engine-platform-rendered-forms.md) |
 | [ADR-0015](0015-durable-resources-outlive-the-cluster.md) §6 | Accepted · September 2026 | Decisions confirmed, but §6's obligation was not met — only the parked rebuild ran | [ADR-0016 §5](0016-what-the-m2-build-changed.md) |
 | [ADR-0015](0015-durable-resources-outlive-the-cluster.md) §1–2, §4 | Accepted · September 2026 | Mechanism replaced; §1's durable set extended to the database user | [ADR-0017](0017-config-connector-engine-platform-rendered-forms.md) |
+| [ADR-0015](0015-durable-resources-outlive-the-cluster.md) | Accepted · September 2026 | A name-reuse rule added: a retired System's name is not reused while any durable resource carrying it exists | [ADR-0017 §9](0017-config-connector-engine-platform-rendered-forms.md) |
 | [ADR-0016](0016-what-the-m2-build-changed.md) §1, §3, §6 | Accepted · September 2026 | Mechanism replaced | [ADR-0017](0017-config-connector-engine-platform-rendered-forms.md) |
+| [ADR-0016](0016-what-the-m2-build-changed.md) §2 | Accepted · September 2026 | Contradicted, not superseded: its `<system>-` prefix also matches another System's instances (for System `orders`, `orders-api-main`); the ADR that ships C-24 in M3 is to replace it with exact instance names | [ADR-0017 §10](0017-config-connector-engine-platform-rendered-forms.md) |
 | [ADR-0016](0016-what-the-m2-build-changed.md) §7 | Accepted · September 2026 | Declared crossings extended by a Terraform root outside `platform-bootstrap` | [ADR-0018](0018-engine-permissions-are-a-list-in-platform-roles.md) |
 | [ADR-0016](0016-what-the-m2-build-changed.md), "Unverified at decision time" | Accepted · September 2026 | The nested-group item is explained, not settled — Google Workspace filters external nested members out of an internal parent group, which accounts for the one negative result; whether IAM inherits the grant through a nested team group is still not positively tested | [m2-paved-road.md, first post-close addendum (2026-09-17)](../build-log/m2-paved-road.md#post-close-addendum-2026-09-17-the-external-account-refusal-explained) |
 | [ADR-0016](0016-what-the-m2-build-changed.md), pre-publication correction | Accepted · September 2026 | The two commits behind it explained; no version on `main` ever carried the withdrawn text | [m2-paved-road.md, second post-close addendum (2026-09-21)](../build-log/m2-paved-road.md#post-close-addendum-2026-09-21-adr-0016s-pre-publication-correction) |

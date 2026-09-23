@@ -133,11 +133,9 @@ milestone status as of M1. The build logs are current; the diagrams are not.
 
 ## Provenance
 
-These are patterns I've designed and run in production at fintech scale —
-multi-year GKE operation, PR-gated system provisioning, one-repo-per-service
-GitOps, and a curated knowledge layer. This repo is the from-scratch, generic
-reference implementation of those patterns: no client or employer code, config,
-or data — pattern only.
+This repo is a from-scratch, generic reference implementation of the pattern:
+no client or employer code, config, or data — pattern only. It is not written
+for any one industry; the pattern applies to any business that ships software.
 
 ## Citing and archives
 

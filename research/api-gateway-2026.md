@@ -1,9 +1,9 @@
 # API Gateway Landscape — 2026 State of the Art
 
 Research digest, 2026-07-28. Motivating question: Gloo worked well in a 2020-era
-fintech platform build — what's the right pick in 2026? All load-bearing claims
-verified against primary sources on 2026-07-28 by a research agent; sources at
-bottom. Ported into this repo 2026-07-29; GCP notes added at port are marked
+platform build — what's the right pick in 2026? All load-bearing claims verified
+against primary sources on 2026-07-28 by a research agent; sources at bottom.
+Ported into this repo 2026-07-29; GCP notes added at port are marked
 [unverified].
 
 ---
@@ -81,7 +81,6 @@ TrafficPolicy/ListenerPolicy CRDs).
 - **Commercial layer:** "Solo Enterprise for kgateway" (2.2.x line): Coraza-based
   WAF (WAFPolicy CRD, OWASP CRS), FIPS images, enterprise policy CRDs, SLAs.
   Support relationship with Solo is resumable, not mandatory.
-- **Fintech signal:** Trust Bank (regulated digital bank) is a public reference.
 - **Risks:** CNCF Sandbox, not yet incubating; maintainership still Solo-heavy;
   Solo's commercial energy has visibly shifted to agentic infrastructure;
   enterprise build (2.2.x) trails OSS (2.4.x).

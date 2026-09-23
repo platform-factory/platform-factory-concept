@@ -1,11 +1,10 @@
 # The Platform Pattern
 
 Design doc, July 2026; annotated against the build 2026-09-21 (see the dated note
-under Thesis). Generalized from patterns designed and run in production at fintech
-scale (multi-year GKE operation, PR-gated provisioning, one-repo-per-service
-GitOps), rebuilt here from scratch as a generic reference implementation on GCP.
-How to *explain* the pattern — the personas it serves, the autonomy analogy, the
-confident handover — is its own design doc: `factory-framing.md`.
+under Thesis). The pattern is generic and written from scratch, with a reference
+implementation on GCP; it is not built for any one industry. How to *explain*
+the pattern — the personas it serves, the autonomy analogy, the confident
+handover — is its own design doc: `factory-framing.md`.
 
 ## Thesis
 

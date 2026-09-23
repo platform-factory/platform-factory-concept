@@ -23,6 +23,7 @@ touches them.
 |---|------|----------------|----------------|--------|
 | M1 | Spine | Org repos, `platform-bootstrap` (Terraform layer 0), GKE, Argo CD app-of-apps from `platform-config` | Terraform's-last-job + GitOps control plane; rebuild cheapness | C-01..C-04 |
 | M2 | Paved road | System XR, `svc-hello` + database claim, Compositions + Kyverno guardrails | Declare intent in your own repo → infrastructure materializes, policy replaces review | C-05..C-08 |
+| M2b | Engine swap (added 2026-09-19, ADR-0017; roles folded in 2026-09-21, ADR-0018) | Config Connector in place of Crossplane; `system` and `claims` Helm charts rendered by platform-owned Applications; the cutover as a rebuild; `platform-roles`, the engine's permissions as four custom roles | The paved road's results hold on a smaller engine, the form stays an allowlist without a custom API, what the engine's roles leave out is a deletion lock Google enforces, and a rebuild's cost is read from the billing export, not estimated | C-26..C-32 |
 | M3 | Approval boundary | `edge-config` (folders + field + CI), CODEOWNERS, Kyverno reality gates, metadata spine, DNS/edge | Repo boundaries can carry the approval model; the spine joins incidents structurally | C-09..C-14 |
 | M4 | Factory slice | One change class (dependency bump) end-to-end: done-criteria, approval packet, agent-authored PRs, scorecard, L1→L2 promotion | The autonomy ladder works — the novel claim nobody has published a working example of | C-15..C-22 |
 

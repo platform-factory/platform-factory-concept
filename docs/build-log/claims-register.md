@@ -44,6 +44,7 @@ Grades: **UNTESTED** → **HELD** | **ADJUSTED** (superseding ADR linked) |
 | C-30 | The new stack is smaller, measured rather than asserted (added 2026-09-19, ADR-0017) | M2b | UNTESTED |
 | C-31 | The engine runs on narrow custom roles, and what they leave out is the third deletion lock (added 2026-09-21, ADR-0018) | M2b | UNTESTED |
 | C-32 | Rebuild cost is measured, not estimated (added 2026-09-22, ADR-0009 and ADR-0015) | M2b | UNTESTED |
+| C-33 | A removed, renamed or broken file deletes no tenant by itself, and a Kyverno outage recovers with one manual sync per failed Application (added 2026-09-24, ADR-0019) | M2b | UNTESTED |
 
 ## M1 — Spine
 
@@ -260,6 +261,14 @@ in the M1 entry, and
 [what C-03's HELD covers](m2-paved-road.md#post-close-addendum-2026-09-21-what-c-03s-held-covers)
 in the M2 entry. No claim text and no grade changed.
 
+On 2026-09-24, C-33 was added from
+[ADR-0019](../adr/0019-a-file-change-deletes-no-tenant-by-itself.md), which
+turns three things ADR-0017 left to convention or left open into guards, also
+before any build command ran. It tests those guards, and a Kyverno outage, in
+the local rehearsal. The texts of C-26..C-32 are unchanged; ADR-0019 §2 also
+fixes the order in which C-28 (c) is run — on the System to which C-28 (a)
+adds a claim, while both claims exist.
+
 - **C-26 — The tenant files survive the engine.** (ADR-0017 §3; C-05 asked
   again, and C-08's idea tested harder than its own test would have)
   The files in `systems/tenants/` drive the new engine without edit and
@@ -447,6 +456,64 @@ in the M2 entry. No claim text and no grade changed.
   **Falsified if** the export cannot be tied to a session — no session's spend
   can be isolated from it — or if a published cost figure still has to come
   from an estimate after M2b closes.
+- **C-33 — A removed, renamed or broken file deletes no tenant by itself,
+  and a Kyverno outage recovers with one manual sync per failed
+  Application.** (ADR-0019; ADR-0017 §3, §4, §7 and its Consequences; added
+  2026-09-24)
+  None of these deletes a tenant's Application, namespace or claim objects
+  without a person's step: a merge that removes or renames the
+  ApplicationSet, renames `tenants/`, removes a tenant file, removes a
+  System's last claim, misnames its `claims.yaml`, carries a malformed tenant
+  file, or makes `charts/system` stop rendering the tenant Namespace; nor a
+  `kubectl delete` of the ApplicationSet with the default background cascade.
+  And once a Kyverno outage ends, the namespace teardown it blocked completes
+  by itself, and each Argo CD sync it blocked completes with at most one
+  manual sync per Application. (The engine's own finalizer updates are not
+  tested: no engine runs in the rehearsal.)
+  **Test:** in the local rehearsal, with the engine's CRDs installed and no
+  engine running, and three tenants: two with one claim each, one with no
+  `claims.yaml`. (a) Remove the ApplicationSet's file, then restore it; rename
+  the ApplicationSet; delete it with `kubectl` (background cascade); merge a
+  `charts/system` change that drops the tenant Namespace. Restore the
+  original state after each. (b) Rename `tenants/`, then restore it; then
+  offboard one tenant as ADR-0019 §1 describes — the PR, then a person's
+  `argocd app delete` of its `<system>-system` Application. (c) Remove one
+  System's only claim; separately, rename its `claims.yaml` to `claims.yml`;
+  then run the manual sync with prune on the first; and read the status of
+  the tenant with no `claims.yaml`. (d) Merge a tenant file with a required
+  field missing. (e) Scale Kyverno's admission controller to zero; merge one
+  change to a gated object, and delete a tenant namespace that holds one.
+  Wait at least 45 minutes: the repo's retry block is ten retries doubling
+  from 15 seconds and capped at five minutes, and because Argo CD v3.4.6
+  counts a retry before computing its wait, the first comes after 30 seconds
+  and the block takes about 38 minutes [C, argo-cd v3.4.6
+  `controller/appcontroller.go`, `processRequestedAppOperation`;
+  `pkg/apis/application/v1alpha1/types.go`, `NextRetryAt`]. Confirm each
+  failed operation has used every retry; then restore Kyverno. No other
+  commit reaches the rehearsal's sources during the wait, so a new revision
+  cannot start a sync that hides the count. (e) counts only if at least one
+  write was refused, recorded verbatim; if Argo CD's self-heal restores
+  Kyverno before the wait ends, that is recorded and (e) is repeated with the
+  `kyverno` Application's automated sync off.
+  **Data:** Applications, namespaces and gated objects deleted in (a)–(d)
+  before any person's step (target: none; then exactly the one tenant
+  offboarded in (b)); each affected Application's sync status and condition
+  text, verbatim; in (e), every refused write verbatim, whether and when the
+  namespace finished terminating after Kyverno returned, and every step
+  recovery needed.
+  **Prediction, written now:** (a)–(d) delete nothing before a person acts;
+  (c) shows Argo CD's "auto-sync will wipe out all resources" condition and
+  the manual prune completes the removal; the tenant with no `claims.yaml`
+  reports Synced and Healthy. In (e) the namespace finishes terminating by
+  itself once Kyverno returns. An Application whose sync failed through the
+  whole retry block stays failed on that revision until someone syncs it
+  again, because Argo CD does not start a new automated sync for a revision
+  whose last sync operation failed [C, argo-cd v3.4.6
+  `controller/appcontroller.go`, `autoSync`]: one manual sync per such
+  Application.
+  **Falsified if** any case in (a)–(d) deletes an Application, a namespace or
+  a claim object without a person's step; or recovery in (e) needs more than
+  one manual sync per failed Application.
 
 ## M3 — Approval boundary
 

@@ -18,8 +18,8 @@ Designed and written by **Ronak Patel**
 > pre-registered experiment: the design's falsifiable claims — 22 of them —
 > were recorded in [the claims register](docs/build-log/claims-register.md) on
 > 2026-07-31, *before* the first build command. The register is append-only;
-> ten more claims were added later, each dated (C-23 during M1; C-24 and C-25
-> at the M2 close; C-26..C-32 for M2b, before its first build command). Some
+> eleven more claims were added later, each dated (C-23 during M1; C-24 and C-25
+> at the M2 close; C-26..C-33 for M2b, before its first build command). Some
 > tests' pass criteria were operationalised in a dated
 > readiness walk at the start of the milestone — for M2 on 2026-09-02, and on
 > 2026-09-14 in [ADR-0012](docs/adr/0012-system-is-the-unit-team-is-a-field.md)
@@ -28,7 +28,7 @@ Designed and written by **Ronak Patel**
 > reworded. The [M2 log](docs/build-log/m2-paved-road.md) and the
 > [register](docs/build-log/claims-register.md) record which, and when. Each
 > milestone grades claims with evidence — including the misses. Eight of the
-> 32 claims carry a grade, the latest from the M2 close (2026-09-17): five
+> 33 claims carry a grade, the latest from the M2 close (2026-09-17): five
 > HELD, three ADJUSTED (the design had to change; superseding ADR linked),
 > none WRONG.
 > Three of the HELD grades are scoped in the register itself. C-03 and C-04
@@ -36,8 +36,8 @@ Designed and written by **Ronak Patel**
 > and rebuild times and manual steps; its third pre-registered measure,
 > actual monthly spend, covers only M1's last two days, because the billing
 > export, switched on at M1's close, holds data from 2026-08-27. The other
-> twenty-four are untested, including one M2 stretch claim (C-08) that was
-> not attempted and the seven M2b claims.
+> twenty-five are untested, including one M2 stretch claim (C-08) that was
+> not attempted and the eight M2b claims.
 > Follow along — this repo is being built in public.
 
 ## The pattern in five sentences

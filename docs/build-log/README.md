@@ -27,7 +27,7 @@ wording was never changed.
 |---|------|----------------|----------------|--------|-------|
 | M1 | Spine | Org repos, `platform-bootstrap` (Terraform layer 0), GKE, Argo CD app-of-apps from `platform-config` | Terraform's-last-job + GitOps control plane; rebuild cheapness | C-01..C-04, C-23 | [m1-spine.md](m1-spine.md) |
 | M2 | Paved road | System XR, `svc-hello` + database claim, Compositions + Kyverno guardrails | Declare intent in your own repo → infrastructure materializes, policy replaces review | C-05..C-08 | [m2-paved-road.md](m2-paved-road.md) |
-| M2b | Engine swap (added 2026-09-19, ADR-0017; roles folded in 2026-09-21, ADR-0018) | Config Connector in place of Crossplane; `system` and `claims` Helm charts rendered by platform-owned Applications; the cutover as a rebuild; `platform-roles`, the engine's permissions as four custom roles | The paved road's results hold on a smaller engine, the form stays an allowlist without a custom API, what the engine's roles leave out is a deletion lock Google enforces, and a rebuild's cost is read from the billing export, not estimated | C-26..C-32 | — |
+| M2b | Engine swap (added 2026-09-19, ADR-0017; roles folded in 2026-09-21, ADR-0018; guards added 2026-09-24, ADR-0019) | Config Connector in place of Crossplane; `system` and `claims` Helm charts rendered by platform-owned Applications; the cutover as a rebuild; `platform-roles`, the engine's permissions as four custom roles; guards so that a removed, renamed or broken file deletes no tenant by itself | The paved road's results hold on a smaller engine, the form stays an allowlist without a custom API, what the engine's roles leave out is a deletion lock Google enforces, a rebuild's cost is read from the billing export, not estimated, and a removed, renamed or broken file deletes no tenant by itself | C-26..C-33 | — |
 | M3 | Approval boundary | `edge-config` (folders + field + CI), CODEOWNERS, Kyverno reality gates, metadata spine, ESO, external-dns, the Gateway | Repo boundaries can carry the approval model; the spine joins incidents structurally | C-09..C-14, C-24 | — |
 | M4 | Factory slice | One change class (dependency bump) end-to-end: done-criteria, approval packet, agent-authored PRs, scorecard, L1→L2 promotion | The autonomy ladder works: a change class earns merge rights from its own track record and loses them automatically when a merged change turns out wrong | C-15..C-22, C-25 | — |
 
@@ -44,7 +44,7 @@ decision (2026-09-17). C-26 tests C-08's idea on the new engine at M2b; C-08
 itself stays deferred. C-25's subject is removed by ADR-0017, and its grade
 column is dealt with at M2b's close. C-23 (added 2026-08-06) and C-24 and
 C-25 (added 2026-09-17) were registered after the 2026-07-31
-pre-registration, as were M2b's C-26..C-32; each is dated in the register.
+pre-registration, as were M2b's C-26..C-33; each is dated in the register.
 The scoreboard in `claims-register.md` is the authority in every case.
 
 ## Entry template

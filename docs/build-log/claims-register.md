@@ -776,6 +776,24 @@ standard and FQDN network policy. One apply on each persistent layer (0 and 1);
 layer 2 rides the rebuild. The Cloudflare delegation and the ruleset changes are
 not applies. As with M2's, each is declared before the milestone that needs it.
 
+**Correction before the build, 2026-10-27, after the `m3-preregistered` tag
+and before any C-11 case.** ADR-0021 §9 lets the garbage collector through
+`deny-edge-objects` on DELETE only. Argo CD prunes in the foreground, and the
+garbage collector then removes the `foregroundDeletion` finalizer with an
+UPDATE. Refused that UPDATE, every route Argo CD prunes would stay terminating.
+That is the failure M2b Session A found in `deny-raw-cloud-resources` on
+2026-10-19 (platform-config `5da7d4a`), and under C-11's *Falsified if* it is a
+platform object refused. The code review of the M3 pull requests found it
+before anything ran. The create-and-update rule therefore exempts
+`kube-system/generic-garbage-collector` too (platform-config#40, `add0fd4`),
+and `scripts/check_charts.py` now fails if the rule leaves the garbage
+collector out or adds the namespace controller. ADR-0021 is not edited. Its §9
+is read with this correction, and M3's build log lists it under ADR errata.
+C-11's test, pass line, *Falsified if* and ceiling are unchanged. One case is
+added to C-11's data: a route file removed from `edge-config`, with the
+HTTPRoute gone within one sync and no refusal in Kyverno's log. It tests this
+exemption the same way M2b's first team move tested deny-raw's.
+
 ## M4 — Factory slice
 
 - **C-15 — A rung is machinery.** (ADR-0007)

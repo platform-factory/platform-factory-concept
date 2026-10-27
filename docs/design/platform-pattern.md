@@ -132,6 +132,10 @@ the promotion path is structural:
   admission controllers and Compositions can't see file paths.
 - **CI enforces folder ↔ field consistency**, so the two views can't drift.
 
+*2026-10-27:* the second and third bullets are superseded: on the Config Connector
+engine the platform renders the route and reads its exposure from the folder, so
+there is no `exposure:` field to keep consistent (ADR-0021 §2).
+
 Intent gates (CODEOWNERS) are always paired with reality gates (Kyverno denies
 edge objects created from app namespaces). A review rule without an admission
 rule is a suggestion.

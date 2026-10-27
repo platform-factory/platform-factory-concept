@@ -8,6 +8,11 @@ never reworded or deleted. Grades change only via a linked build-log entry.
 Grades: **UNTESTED** → **HELD** | **ADJUSTED** (superseding ADR linked) |
 **WRONG** (ADR linked).
 
+*2026-10-27:* from M3's readiness note on, grades use the six words of
+[ADR-0020](../adr/0020-a-failed-test-is-graded-without-abandoning-the-design.md)
+(HELD, ADJUSTED, PARTIAL, UNSUPPORTED, WRONG, NOT REACHED) and may carry a
+pre-committed ceiling.
+
 ## Scoreboard
 
 | ID | Claim (short) | Milestone | Grade |
@@ -45,6 +50,9 @@ Grades: **UNTESTED** → **HELD** | **ADJUSTED** (superseding ADR linked) |
 | C-31 | The engine runs on narrow custom roles, and what they leave out is the third deletion lock (added 2026-09-21, ADR-0018) | M2b | UNTESTED |
 | C-32 | Rebuild cost is measured, not estimated (added 2026-09-22, ADR-0009 and ADR-0015) | M2b | UNTESTED |
 | C-33 | A removed, renamed or broken file deletes no tenant by itself, and a Kyverno outage recovers with one manual sync per failed Application (added 2026-09-24, ADR-0019) | M2b | UNTESTED |
+| C-34 | Tenant namespaces are isolated by default (added 2026-10-27, ADR-0021 §15) | M3 | UNTESTED |
+
+*2026-10-27:* ADR-0020's vocabulary applies from M3's readiness note on; every grade above was given under ADR-0008's three words and stands.
 
 ## M1 — Spine
 
@@ -561,6 +569,212 @@ adds a claim, while both claims exist.
   **Data:** seconds the sibling's grant was absent (target: zero; M2 baseline:
   about 300); the condition expression as shipped; any API call the condition
   broke.
+
+- **C-34 — Tenant namespaces are isolated by default.** (ADR-0021 §15;
+  platform-config#21; `platform-pattern.md`, "The tenant model"; added
+  2026-10-27)
+  Every tenant namespace carries Pod Security `baseline` (enforced, with
+  `restricted` as warn and audit, the version pinned) and a default-deny
+  NetworkPolicy with a named allow list, so a pod in one tenant's namespace
+  cannot connect to another tenant's, and a pod that asks for privilege is
+  refused, while the golden path keeps working. This is the cooperative model
+  between tenants: it stops accidents and noisy neighbours, and hostile-tenant
+  isolation is not claimed.
+  **Test:** (a) from a pod in `svc-ledger`'s namespace, connect to `svc-hello`'s
+  Service and to its pod IP, before the default is applied and after;
+  (b) `svc-hello`'s `/healthz` and a fresh `GRANT` Job stay green after it;
+  (c) a privileged pod in a tenant namespace is refused; (d) a tenant-written
+  allow-all NetworkPolicy is applied, and what it opened is recorded.
+  **Data:** each connection and its result, before and after; the allow list as
+  shipped, and every allow the golden path needed that platform-config#21's list
+  missed; the refusal message for (c); the set of pods (d) reached.
+  **Prediction, written now:** before the default, (a) succeeds, because no
+  policy selects the pods; after it, both
+  connections fail; (b) and (c) hold; (d) opens only the tenant's own pods
+  [I, from platform-config#21; none of it tried]. An allow-table note: the
+  external Gateway's proxies and health checks arrive from `130.211.0.0/22` and
+  `35.191.0.0/16`, and `gke-l7-rilb`'s from the proxy-only subnet's range plus
+  the same health-check ranges.
+  **Falsified if** a cross-tenant connection succeeds under the default, or the
+  golden path breaks.
+
+### M3 readiness note (2026-10-27)
+
+The question the M1 grading note asked for was applied to M3 before its first
+build command, together with the decisions in
+[ADR-0021](../adr/0021-the-approval-boundary-on-the-config-connector-engine.md)
+and the vocabulary and ceilings of
+[ADR-0020](../adr/0020-a-failed-test-is-graded-without-abandoning-the-design.md).
+Result: M3 is split into **M3a** (the approval boundary: C-09, C-10, C-11) and
+**M3b** (the edge it governs: C-12, C-13, C-14, C-24 and the new C-34). The
+milestone column stays M3 for every claim, and both halves close in one
+build-log entry. platform-config#33, which closed a way around the gate C-11
+tests, merged on 2026-10-27, before any C-11 case runs. Each entry below gives the half, the
+test and its cases, the pass line, "Falsified if", the pre-committed ceiling and
+what one person on both teams cannot show. A ceiling is the highest grade the
+close may give; it never forbids a lower one or NOT REACHED. **Claims
+unchanged**, per the append-only rule: no claim's text above is touched, and the
+paragraphs below say how each is run.
+
+**Entry gate, archive and order.** Nothing that touches the cluster runs before
+M2b's build-log entry exists (ADR-0021 §1); the GitHub-only part of M3a may.
+Before the first M3 build command of either kind, this register with this note,
+ADR-0020 and ADR-0021 are tagged on `main` and archived by a GitHub release and
+a Software Heritage save request; the tag and the archive identifiers are the
+first lines of M3's build-log entry, since they cannot be written here. The
+cluster work runs in this order, and a later step does not start until the
+earlier one has its data: the layer-0 and layer-1 applies, the layer-2 rebuild
+(timed; NAT logs re-read for C-23), C-34, C-11's cluster cases, C-13, C-24,
+C-12, C-14. Under ADR-0020 a claim whose test does not run inside the milestone
+is graded NOT REACHED with its precondition named, never carried in silence; the
+claims most exposed to that are C-14 and C-12, which run last, and C-24, which
+needs a second billed instance and the M2b cleanup of `second` and
+`svc-onboard`. No claim is cut from M3 here, because a cut would be a reschedule
+and NOT REACHED is the honest word for one.
+
+**C-09, M3a.** *Test:* pull requests to `edge-config` under the ruleset of
+ADR-0021 §10 (required reviewer `security`, one approval, `external/**`). Cases:
+the flip, `git mv internal/svc-hello/<route>.yaml external/svc-hello/<route>.yaml`,
+without a `security` approval; the same flip merged by the organisation owner
+editing the ruleset, read from the ruleset history endpoint and listed as
+slipped (ADR-0021 §10); a new file straight into `external/`; a
+rename into `external/`; a pull request that edits the workflow that produces the
+required check; and the organisation owner editing the ruleset, read from the
+ruleset history endpoint. The registered "field flip without the move" has no
+case, because there is no field; it becomes C-10's `exposure` case. The ruleset
+JSON is recorded as `gh api` returns it, before and after each change, in
+`platform-factory/.github`. *Pass line:* no change under `external/` reaches
+`main` by any path through the rule without an approval from `security`, and
+every case is recorded as blocked or slipped. *Falsified if* any such change
+reaches `main` without one, or any C-11 case is admitted by either door, which
+is a path around the review (concept#26); either is graded WRONG. The owner-edits-the-ruleset case is
+recorded and not scored against the rule, because the owner role is a bypass in
+itself. *Ceiling:* **ADJUSTED**. *One person cannot show:* separated duties or
+independent review. The run shows that GitHub enforces a path-scoped rule, and a
+permitted flip may not be producible at all, since an author cannot approve
+their own pull request.
+
+**C-10, M3a.** *Test:* the check and the route chart's closed schema are run
+against an adversarial set of route files, each also kept as a must-fail fixture
+(ADR-0019 §4): a file with an `exposure` key, in each folder; a `host` outside
+`^[a-z][a-z0-9-]{0,30}[a-z0-9]$`; the same `host` in both folders; a `system`
+folder that names no tenant file; an unknown key; a non-integer `port`; two
+external routes in one System naming the same `service` (ADR-0021 §7). The
+check is written against this list before the run. A case that both the schema
+and the check accept is an escape, recorded as a failed case; if the check is
+then changed, the entry reports the escape, the change and the re-run, as C-07's
+entry did. The check becomes a required status
+check once it has failed once and passed once. *Pass line:* every case is
+refused before merge, by the schema or the check. *Falsified if* any case is
+accepted by both. *Ceiling:* **ADJUSTED**, because the registered subject (a
+field that can disagree with its folder) no longer exists (ADR-0021 §2). *One
+person cannot show:* that a second reviewer would read a failing check. Making it
+required shows that GitHub honours it.
+
+**C-11, M3a.** *Test:* each case is created three ways: by a team member's
+`kubectl --as=<user> --as-group=<team>@<domain>`, through the service repo's
+`k8s/`, and by the operator's own `kubectl`, which no rule exempts, so that a
+refusal RBAC makes before admission (likely for the Gateway API kinds, whose
+definitions do not aggregate into `admin`) does not stand in for the policy's.
+The cluster cases run on the rebuilt cluster with the Gateway API channel on, so
+every kind `deny-edge-objects` names exists; a policy naming an absent kind is
+not enforced [I]. Cases: a Service of type `LoadBalancer`; one of type `NodePort`; an
+`Ingress`; a `Gateway`; an `HTTPRoute`; a `ReferenceGrant`; a `GCPBackendPolicy`;
+and, for the second half, a gated cloud kind and a route kind, each with no
+System label and with a label naming another namespace. The DNS-annotation case
+is not run, because there is no external-dns. Cases predicted admitted: the
+platform's own routes and cloud objects. *Pass line:* every violating object is
+refused at the door it uses, with the message recorded; for the label cases on
+the `kubectl` doors the recorded message names `require-system-label`, since
+`deny-edge-objects` or deny-raw would refuse those objects anyway and the label
+rule is otherwise untested; and every platform object is admitted. *Falsified if* any violating object is admitted, by either door
+(which also makes C-09's "no path around it" false), or a platform-rendered
+object is refused. *Ceiling:* **ADJUSTED**, because "denies untagged resources"
+is re-scoped to cloud and route kinds (ADR-0021 §9). *One person cannot show:*
+what a real team member's RBAC allows beyond `admin`. `--as` shows how the policy
+treats an impersonated identity.
+
+**C-12, M3b.** *Test:* a synthetic incident on `svc-hello` (a restart loop) fires
+the Cloud Monitoring alerting policy on container restarts per namespace. The
+join is alert → namespace → System label on the namespace → tenant file → team
+and repo. *Pass line:* each hop is reached by a lookup on a key already in hand,
+and the number of hops that needed a hand search or a guess is zero. *Falsified
+if* the firing alert does not carry the namespace, or any hop needs a search, a
+guess or a label that is not there. "The PRs merged since the last healthy state"
+is not tested: it needs a deploy event that does not exist, and moves to the
+prod-tag-bump class at M4. *Ceiling:* **PARTIAL**. *One person cannot show:* that
+anyone other than the person who built the join can follow it without
+archaeology.
+
+**C-13, M3b.** *Test:* an external and an internal route for `svc-hello`. "Both
+env zones" means the one environment's public and private zones. Cases: the
+external name resolves from outside to the external IP; the wildcard certificate
+issues (time recorded) and HTTPS reaches `svc-hello`; a request with a
+SQL-injection pattern returns 403 through Cloud Armor; an unknown host gets the
+Gateway's 404; the internal name resolves inside the VPC and answers on HTTP 80;
+the `git mv` flip moves a route from the internal Gateway to the external one.
+*Pass line:* all of these hold. *Falsified if* the certificate does not reach
+ACTIVE within the session once its DNS-authorization record resolves from public
+resolvers (a certificate still provisioning at the session's end is a case not
+run: PARTIAL under ADR-0020 §1), a name does not resolve, the Cloud Armor policy does not attach through the
+rendered `GCPBackendPolicy`, or the flip does not change the route's Gateway.
+*Data* as registered, with Gateway API conformance findings. *Ceiling:*
+**ADJUSTED**: C-13's text says the `exposure:` field selects the policy, zone
+and class; under ADR-0021 §2 the folder does. The external route and the flip
+are `external/` merges made after C-09's rule is live, merged as ADR-0021 §10
+says, and each is also listed in C-09's data. *One person cannot show:* more than one
+environment, one route and one service.
+
+**C-14, M3b.** *Test:* the primary-source check is recorded (ADR-0021 §13), then,
+on the reference cluster with Dataplane V2 and FQDN policy on, a pod under a
+default-deny egress that allows `www.google.com:443` only. It runs in a namespace
+that does not carry C-34's allow list, so the refusal can be attributed to the
+FQDN rule. DNS churn is read from TTL behaviour and recorded as data. *Pass
+line:* the allowed host is reached, `example.com` is refused, and the feature is
+available on the cluster's tier. *Falsified if* either reachability check comes
+out the other way, or the feature cannot be enabled on the reference cluster.
+*Ceiling:* none pre-committed. *One person cannot show:* anything beyond one
+allowed and one refused name on one cluster.
+
+**C-24, M3b.** *Test:* as registered, with `svc-onboard` moved to `payments` so
+that `svc-hello` and `svc-onboard` share a team, one claim each. Then one moves
+to another team while the project policy is polled every ten seconds for fifteen
+minutes, and the application still connects through the Auth Proxy under the
+condition. The grants are the conditioned pairs of ADR-0021 §14. Before the
+connect test the project policy is read from the cloud side and shows no
+unconditioned `cloudsql.client` or `cloudsql.instanceUser` grant for the app's
+or the team's identity; any found is removed first and the removal recorded
+(ADR-0017 §10's cleanup), because with one present the connect test could not
+fail. A second billed instance is accepted for the fixture. ADR-0021 §14's
+exact-name condition, replacing ADR-0016 §2's prefix before the run, is not by
+itself a design change for grading, because C-24's text names no prefix. *Pass
+line:* the sibling's grant is absent for 0 seconds (M2 baseline: about 300), the
+application connects with only the conditioned grants in the policy, and the
+condition as shipped names only the System's own instance.
+*Falsified if* the grant is absent for any time, the application cannot connect,
+or the condition breaks an API call. *Ceiling:* none pre-committed. *One person
+cannot show:* an overmatch between names that extend each other, because that
+fixture needs a second instance and is not planned.
+
+**C-34, M3b.** The new claim above. *Ceiling:* none pre-committed. *One person
+cannot show:* hostile-tenant isolation, which is not claimed. A team holds `admin`
+and can delete or widen its own namespace's policy with `kubectl`, and database
+access between tenants is limited by IAM alone.
+
+**C-08.** C-08 stays UNTESTED and is **graded NOT REACHED at M3's close**
+(ADR-0020, ADR-0021 §16), naming two preconditions not met: the governance
+decision the M2 grading note records as undecided, and a composition layer to
+swap, which ADR-0017 removed.
+
+**The Terraform crossings declared for C-01's count** (ADR-0021 §12), before any
+M3 command. Layer 0: the APIs `certificatemanager`, `dns` and, if needed,
+`networkservices`. Layer 1: the two zones, two wildcard records, the global and
+the regional address, the proxy-only subnet, the DNS authorization, certificate,
+certificate map and its entry, the Cloud Armor policy and the alerting policy.
+Layer 2: `datapath_provider = ADVANCED_DATAPATH`, the Gateway API channel
+standard and FQDN network policy. One apply on each persistent layer (0 and 1);
+layer 2 rides the rebuild. The Cloudflare delegation and the ruleset changes are
+not applies. As with M2's, each is declared before the milestone that needs it.
 
 ## M4 — Factory slice
 

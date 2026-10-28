@@ -523,6 +523,39 @@ adds a claim, while both claims exist.
   a claim object without a person's step; or recovery in (e) needs more than
   one manual sync per failed Application.
 
+**On 2026-10-28, before S3 counts the Config Connector side, C-30's two open
+readings are fixed.** C-30's text and prediction are unchanged.
+
+*Lines.* "Non-comment lines of recipe, schema and policy" is read narrowly.
+Recipe means the files that turn a tenant file or a claim into objects: the two
+Compositions on Crossplane, and the templates of `charts/system` and
+`charts/claims` on Config Connector. Schema means the two XRDs on Crossplane and
+the two charts' `values.schema.json` on Config Connector. Policy means
+`kyverno/policies/`. Lines are counted non-comment, with template comments
+stripped, which is the 2026-10-23 desk count's first method. This reading was
+chosen after that desk count had been seen on both sides. It is the reading
+less favourable to the prediction (+12.3% for recipe, schema and policy on the
+narrow set, against −7.8% on the widest), and it is the one whose rows sum
+exactly the three categories the text names. The wider sets are reported
+beside it and are not graded. The count is re-run at the close on the commit
+S3 runs.
+
+*Concepts.* The method is fixed here, before either list is written. The
+reader follows `svc-hello` with one database claim, from its tenant file and
+its claim to its cloud resources. Two kinds of item are listed by name, each
+once, with the file where the reader first meets it:
+- every API kind met on that path, whether it creates, is created or refuses;
+- every mechanism that is not a kind but must be known to predict what
+  happens.
+
+Items the two engines share, such as Argo CD's and Kyverno's, are counted on
+both sides. The total is reported twice: without and with ADR-0018's three
+additions (an eighth repo, the custom role, a second home for Terraform), each
+counted as one item. The Crossplane list is made from `3bfc72d`, the last
+Crossplane `main`; the Config Connector list from the commit S3 runs. Both
+lists are published in M2b's entry so a reader can dispute any item, and the
+claim's "Falsified if" is read on the second total.
+
 ## M3 — Approval boundary
 
 - **C-09 — The flip forces review.** (ADR-0002)

@@ -19,7 +19,7 @@ pre-committed ceiling.
 |----|---------------|-----------|-------|
 | C-01 | Terraform ends at layer 0 | M1 | **ADJUSTED** (2026-09-17, ADR-0016 §7) — deferred from M1 |
 | C-02 | Tear-down/rebuild is cheap enough to run between sessions | M1 | **HELD** on wall-clock and interventions (2026-08-28); the pre-registered spend figure exists only from 2026-08-27, so it is unrecoverable for all but M1's last two days (scope recorded 2026-09-21) |
-| C-03 | provider-upjet-gcp covers the kinds the Compositions need | M1 | **HELD** for the kinds M2 composes: seven created and reconciled, one create-path gap (IAM `sql.User`); two kinds C-03 names that M2 does not compose (GCS bucket, Cloud DNS records) never hands-on created (2026-09-17; scope recorded 2026-09-21) — deferred from M1 |
+| C-03 | provider-upjet-gcp covers the kinds the Compositions need | M1 | **HELD** for the kinds M2 composes: seven created and reconciled, one create-path gap (IAM `sql.User`); two kinds C-03 names that M2 does not compose (GCS bucket, Cloud DNS records) never hands-on created (2026-09-17; scope recorded 2026-09-21), and not carried forward, because ADR-0017 retires the provider ([M2b entry](m2b-engine-swap.md), 2026-10-31) — deferred from M1 |
 | C-04 | One Argo app-of-apps can own the whole cluster surface | M1 | **HELD** for the M1 surface (2026-08-28) |
 | C-05 | One YAML per tenant materializes the full tenant surface | M2 | **HELD** (2026-09-17) |
 | C-06 | Ownership moves with a YAML edit, no re-plumbing | M2 | **ADJUSTED** (2026-09-17, ADR-0016 §1–2) |
@@ -41,15 +41,15 @@ pre-committed ceiling.
 | C-22 | Knowledge freshness and the question bank work as CI | M4 | UNTESTED |
 | C-23 | Image pulls ride the Google-API path; internet egress reduces to git (added 2026-08-06) | M1 | **HELD** (2026-08-28) |
 | C-24 | A per-System IAM Condition makes a team's Cloud SQL grants independent between Systems (added 2026-09-17, ADR-0016 §2) | M3 | UNTESTED |
-| C-25 | A provider release with the sql.User fix removes the manual database-user step (added 2026-09-17, ADR-0016 §4) | M4 | UNTESTED |
-| C-26 | The existing tenant files drive the new engine unchanged (added 2026-09-19, ADR-0017 §3) | M2b | UNTESTED |
-| C-27 | Ownership still moves with a YAML edit on the new engine, and a broken naming rule fails loudly (added 2026-09-19, ADR-0017 §10) | M2b | UNTESTED |
-| C-28 | Guardrails replace review without a custom API: a values file only the platform renders (added 2026-09-19, ADR-0017 §4–7 and §9) | M2b | UNTESTED |
-| C-29 | The engine cutover is a rebuild: nothing durable is re-created, and rollback is a rebuild too (added 2026-09-19, ADR-0017 §12) | M2b | UNTESTED |
-| C-30 | The new stack is smaller, measured rather than asserted (added 2026-09-19, ADR-0017) | M2b | UNTESTED |
-| C-31 | The engine runs on narrow custom roles, and what they leave out is the third deletion lock (added 2026-09-21, ADR-0018) | M2b | UNTESTED |
-| C-32 | Rebuild cost is measured, not estimated (added 2026-09-22, ADR-0009 and ADR-0015) | M2b | UNTESTED |
-| C-33 | A removed, renamed or broken file deletes no tenant by itself, and a Kyverno outage recovers with one manual sync per failed Application (added 2026-09-24, ADR-0019) | M2b | UNTESTED |
+| C-25 | A provider release with the sql.User fix removes the manual database-user step (added 2026-09-17, ADR-0016 §4) | M4 | UNTESTED — subject removed by ADR-0017; not an M4 claim, and not graded ([M2b entry](m2b-engine-swap.md), 2026-10-31) |
+| C-26 | The existing tenant files drive the new engine unchanged (added 2026-09-19, ADR-0017 §3) | M2b | **HELD** (2026-10-31; Session A reconstructed from audit logs, [M2b entry](m2b-engine-swap.md)) |
+| C-27 | Ownership still moves with a YAML edit on the new engine, and a broken naming rule fails loudly (added 2026-09-19, ADR-0017 §10) | M2b | **HELD** (2026-10-31; reconstructed, [M2b entry](m2b-engine-swap.md)) |
+| C-28 | Guardrails replace review without a custom API: a values file only the platform renders (added 2026-09-19, ADR-0017 §4–7 and §9) | M2b | **ADJUSTED** (2026-10-31, ADR-0022 §1–2, [M2b entry](m2b-engine-swap.md)) |
+| C-29 | The engine cutover is a rebuild: nothing durable is re-created, and rollback is a rebuild too (added 2026-09-19, ADR-0017 §12) | M2b | **HELD** (2026-10-31; forward leg reconstructed, [M2b entry](m2b-engine-swap.md)) |
+| C-30 | The new stack is smaller, measured rather than asserted (added 2026-09-19, ADR-0017) | M2b | **HELD, scoped** (2026-10-31): falsifier not met; "fewer recipe lines" missed, +11.0% ([M2b entry](m2b-engine-swap.md)) |
+| C-31 | The engine runs on narrow custom roles, and what they leave out is the third deletion lock (added 2026-09-21, ADR-0018) | M2b | **HELD** (2026-10-31, [M2b entry](m2b-engine-swap.md)) |
+| C-32 | Rebuild cost is measured, not estimated (added 2026-09-22, ADR-0009 and ADR-0015) | M2b | UNTESTED — the test did not run; the only billing export holds no rows for the project (2026-10-31, [M2b entry](m2b-engine-swap.md)) |
+| C-33 | A removed, renamed or broken file deletes no tenant by itself, and a Kyverno outage recovers with one manual sync per failed Application (added 2026-09-24, ADR-0019) | M2b | **HELD, scoped** (2026-10-31, ADR-0022 §3–4): (e) under a deviation; (x) a counter-example outside the registered cases ([M2b entry](m2b-engine-swap.md)) |
 | C-34 | Tenant namespaces are isolated by default (added 2026-10-27, ADR-0021 §15) | M3 | UNTESTED |
 
 *2026-10-27:* ADR-0020's vocabulary applies from M3's readiness note on; every grade above was given under ADR-0008's three words and stands.
@@ -556,6 +556,19 @@ Crossplane `main`; the Config Connector list from the commit S3 runs. Both
 lists are published in M2b's entry so a reader can dispute any item, and the
 claim's "Falsified if" is read on the second total.
 
+### M2b grading note (2026-10-31)
+
+Graded at M2b's close; full evidence and reasoning in
+[`m2b-engine-swap.md`](m2b-engine-swap.md) under "Claims graded". The
+superseding ADR is [ADR-0022](../adr/0022-what-the-m2b-build-changed.md).
+
+**HELD:** C-26, C-27, C-29, C-31. **HELD, scoped:** C-30, C-33. **ADJUSTED:**
+C-28. **UNTESTED:** C-32 (the test did not run). C-25's cell and C-03's
+carried-forward checks are dealt with as this register's M2b section said they
+would be. C-26, C-27, C-28 and C-29's forward leg rest in part on Session A
+data reconstructed from audit logs. No grade of C-05..C-07 changes, and no M3
+ceiling moves.
+
 ## M3 — Approval boundary
 
 - **C-09 — The flip forces review.** (ADR-0002)
@@ -826,6 +839,50 @@ C-11's test, pass line, *Falsified if* and ceiling are unchanged. One case is
 added to C-11's data: a route file removed from `edge-config`, with the
 HTTPRoute gone within one sync and no refusal in Kyverno's log. It tests this
 exemption the same way M2b's first team move tested deny-raw's.
+
+**On 2026-10-31, before C-11's first cluster case: what a Kyverno outage opens, accepted with the fact stated.**
+ADR-0022 §3 leaves this entry to M3. Both of C-11's gates are Kyverno policies,
+and how Kyverno fails depends on how it goes down.
+- **Crash, unready pod, or a node lost with the pod on it.** The webhook
+  configurations stay registered and writes to the gated kinds are refused
+  (C-33 (e), attempt 2).
+- **Admission controller's Deployment scaled to zero or deleted.** Kyverno
+  deletes its own webhook configurations as it stops. Nothing is refused until
+  it returns [C, kyverno v1.19.2 `pkg/webhooks/server.go` `Stop` → `cleanup`,
+  gated by `pkg/utils/runtime/utils.go` `IsGoingDown`; kyverno#6554, closed].
+
+M3 adopts no remedy and accepts that window, with these facts:
+- **Who can open it.** Only a writer of the Deployment's desired state can: the
+  platform's Argo CD, from a reviewed `platform-config` change, or a cluster
+  admin. A team's `admin` role in its own namespace cannot reach the `kyverno`
+  namespace.
+- **Nothing closes it automatically.** The vendored chart, with
+  `platform-config`'s values, renders `replicas: null` on all four Kyverno
+  Deployments (Helm 3.19.4, read 2026-10-29). There is no count in git for
+  Argo CD's self-heal to restore. In the C-33 rehearsal, self-heal did not
+  restore a scaled-down admission controller within 180 s (M2b build log,
+  Surprise 5). The window lasts until a person scales it back.
+- **What it opens, and what still holds.** In the window, a team's `kubectl`
+  can create or edit, in its own namespace, the cloud kinds and the edge
+  kinds the two gates refuse, and Config Connector and GKE's Gateway
+  controller act on them. Durable cloud data keeps its other locks:
+  - the abandon annotation;
+  - the engine's narrow roles, under which Google refused both raw deletes in
+    C-31 (b) on 2026-10-29.
+
+  The window is a door for new or changed objects, not for deleting durable
+  ones.
+- **Why no remedy now.** The candidates are:
+  - a native `ValidatingAdmissionPolicy` refusing `replicas: 0` on Kyverno's
+    Deployments, which does not depend on Kyverno's pods;
+  - setting `replicas` in git, so that self-heal restores it;
+  - the two gates rewritten as `ValidatingAdmissionPolicy` objects.
+
+  Each changes the admission path C-11 tests, and the surface C-11 runs on
+  is fixed by this note. A remedy is a later milestone's decision.
+- **What C-11 covers.** C-11's cases run with the admission controller at one
+  ready replica. The window is outside C-11's cases, and C-11's grade says
+  nothing about it either way.
 
 ## M4 — Factory slice
 

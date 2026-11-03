@@ -24,13 +24,13 @@ pre-committed ceiling.
 | C-05 | One YAML per tenant materializes the full tenant surface | M2 | **HELD** (2026-09-17) |
 | C-06 | Ownership moves with a YAML edit, no re-plumbing | M2 | **ADJUSTED** (2026-09-17, ADR-0016 §1–2) |
 | C-07 | Database claims: guardrails replace review | M2 | **ADJUSTED** (2026-09-17, ADR-0016 §3–4) |
-| C-08 | The System schema survives a Composition swap | M2 (stretch) | UNTESTED — not attempted; deferred to M3 pending a governance decision (2026-09-17) |
-| C-09 | internal→external is a `git mv` that forces security review | M3 | UNTESTED |
-| C-10 | CI can hold folder ↔ field consistency | M3 | UNTESTED |
-| C-11 | Kyverno reality gates back every intent gate | M3 | UNTESTED |
-| C-12 | The metadata spine joins alert→team→repo→PRs structurally | M3 | UNTESTED |
-| C-13 | The edge model works on GKE as designed | M3 | UNTESTED |
-| C-14 | FQDN egress policy is available where the design assumes it | M3 | UNTESTED |
+| C-08 | The System schema survives a Composition swap | M2 (stretch) | **NOT REACHED** (2026-11-03): no governance decision, and no composition layer to swap since ADR-0017 ([M3 entry](m3-approval-boundary.md)) |
+| C-09 | internal→external is a `git mv` that forces security review | M3 | **ADJUSTED** (2026-11-03, ADR-0021 §10; at the pre-committed ceiling): every path into `external/` through the rule blocked; the flip merged only by the owner's recorded lift ([M3 entry](m3-approval-boundary.md)) |
+| C-10 | CI can hold folder ↔ field consistency | M3 | **ADJUSTED, scoped** (2026-11-03, ADR-0021 §2, ADR-0023 §2; at the ceiling): all eight cases refused; a counter-example outside them, a pull request that edits the check's workflow (#19) ([M3 entry](m3-approval-boundary.md)) |
+| C-11 | Kyverno reality gates back every intent gate | M3 | **ADJUSTED** (2026-11-03, ADR-0021 §9; at the ceiling): 33 attempts on three doors, 0 admitted ([M3 entry](m3-approval-boundary.md)) |
+| C-12 | The metadata spine joins alert→team→repo→PRs structurally | M3 | **PARTIAL** (2026-11-03; at the ceiling): alert → team and repo in three lookups, none searched; "PRs merged since the last healthy state" not run, moves to M4 ([M3 entry](m3-approval-boundary.md)) |
+| C-13 | The edge model works on GKE as designed | M3 | **ADJUSTED** (2026-11-03, ADR-0021 §2 and §5; at the ceiling): every case held; one SQL-injection form not refused by Cloud Armor, source unknown ([M3 entry](m3-approval-boundary.md)) |
+| C-14 | FQDN egress policy is available where the design assumes it | M3 | **HELD** (2026-11-03): Standard cluster, no edition requirement; allowed host reached, `example.com` refused, 24 of 24 under churn ([M3 entry](m3-approval-boundary.md)) |
 | C-15 | A rung is enforceable by branch protection + CODEOWNERS alone | M4 | UNTESTED |
 | C-16 | The approval packet keeps L1 review real, not ritual | M4 | UNTESTED |
 | C-17 | The scorecard derives from PR metadata + verification alone | M4 | UNTESTED |
@@ -40,7 +40,7 @@ pre-committed ceiling.
 | C-21 | Agents operate PR-only with their own identity, fully attributable | M4 | UNTESTED |
 | C-22 | Knowledge freshness and the question bank work as CI | M4 | UNTESTED |
 | C-23 | Image pulls ride the Google-API path; internet egress reduces to git (added 2026-08-06) | M1 | **HELD** (2026-08-28) |
-| C-24 | A per-System IAM Condition makes a team's Cloud SQL grants independent between Systems (added 2026-09-17, ADR-0016 §2) | M3 | UNTESTED |
+| C-24 | A per-System IAM Condition makes a team's Cloud SQL grants independent between Systems (added 2026-09-17, ADR-0016 §2) | M3 | **HELD** (2026-11-03): the sibling's grants in 75 of 75 polls through a team move; svc-ledger stood in for svc-onboard ([M3 entry](m3-approval-boundary.md)) |
 | C-25 | A provider release with the sql.User fix removes the manual database-user step (added 2026-09-17, ADR-0016 §4) | M4 | UNTESTED — subject removed by ADR-0017; not an M4 claim, and not graded ([M2b entry](m2b-engine-swap.md), 2026-10-31) |
 | C-26 | The existing tenant files drive the new engine unchanged (added 2026-09-19, ADR-0017 §3) | M2b | **HELD** (2026-10-31; Session A reconstructed from audit logs, [M2b entry](m2b-engine-swap.md)) |
 | C-27 | Ownership still moves with a YAML edit on the new engine, and a broken naming rule fails loudly (added 2026-09-19, ADR-0017 §10) | M2b | **HELD** (2026-10-31; reconstructed, [M2b entry](m2b-engine-swap.md)) |
@@ -50,7 +50,7 @@ pre-committed ceiling.
 | C-31 | The engine runs on narrow custom roles, and what they leave out is the third deletion lock (added 2026-09-21, ADR-0018) | M2b | **HELD** (2026-10-31, [M2b entry](m2b-engine-swap.md)) |
 | C-32 | Rebuild cost is measured, not estimated (added 2026-09-22, ADR-0009 and ADR-0015) | M2b | UNTESTED — the test did not run; the only billing export holds no rows for the project (2026-10-31, [M2b entry](m2b-engine-swap.md)) |
 | C-33 | A removed, renamed or broken file deletes no tenant by itself, and a Kyverno outage recovers with one manual sync per failed Application (added 2026-09-24, ADR-0019) | M2b | **HELD, scoped** (2026-10-31, ADR-0022 §3–4): (e) under a deviation; (x) a counter-example outside the registered cases ([M2b entry](m2b-engine-swap.md)) |
-| C-34 | Tenant namespaces are isolated by default (added 2026-10-27, ADR-0021 §15) | M3 | UNTESTED |
+| C-34 | Tenant namespaces are isolated by default (added 2026-10-27, ADR-0021 §15) | M3 | **ADJUSTED** (2026-11-03, ADR-0023 §1): the golden path broke for 15 minutes as shipped; fixed by allowing NodeLocal DNSCache, then every case held ([M3 entry](m3-approval-boundary.md)) |
 
 *2026-10-27:* ADR-0020's vocabulary applies from M3's readiness note on; every grade above was given under ADR-0008's three words and stands.
 
@@ -883,6 +883,23 @@ M3 adopts no remedy and accepts that window, with these facts:
 - **What C-11 covers.** C-11's cases run with the admission controller at one
   ready replica. The window is outside C-11's cases, and C-11's grade says
   nothing about it either way.
+
+### M3 grading note (2026-11-03)
+
+Graded at M3's close; full evidence and reasoning in
+[`m3-approval-boundary.md`](m3-approval-boundary.md) under "Claims graded",
+with ADR-0020's six words and the ceilings the readiness note fixed. The
+superseding ADR for what the build changed is
+[ADR-0023](../adr/0023-what-the-m3-build-changed.md).
+
+**HELD:** C-14, C-24. **ADJUSTED:** C-09, C-11, C-13 (each at its ceiling);
+C-10, scoped, at its ceiling, with a counter-example outside the registered
+cases (ADR-0023 §2); C-34, by a change the build made (ADR-0023 §1).
+**PARTIAL:** C-12, at its ceiling. **NOT REACHED:** C-08, as pre-committed. No
+claim's text changes, no ceiling moves, and no earlier milestone's grade
+changes. Deviations, each in the entry: one `external/` merge, not two;
+`svc-ledger` in place of `svc-onboard` for C-24; the IAM poller at 13 s, not
+10 s.
 
 ## M4 — Factory slice
 

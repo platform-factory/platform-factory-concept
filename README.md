@@ -11,10 +11,12 @@ Designed and written by **Ronak Patel**
 
 [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.22848132.svg)](https://doi.org/10.5281/zenodo.22848132)
 
-> **Status: M1 (Spine), M2 (Paved road) and M2b (Engine swap,
+> **Status: M1 (Spine), M2 (Paved road), M2b (Engine swap,
 > [ADR-0017](docs/adr/0017-config-connector-engine-platform-rendered-forms.md))
-> are built and closed, with their claims graded; M3 (Approval boundary) is in
-> progress.** The build runs as a
+> and M3 (Approval boundary,
+> [ADR-0021](docs/adr/0021-the-approval-boundary-on-the-config-connector-engine.md))
+> are built and closed, with their claims graded; M4 (Factory slice) is
+> next.** The build runs as a
 > pre-registered experiment: the design's falsifiable claims — 22 of them —
 > were recorded in [the claims register](docs/build-log/claims-register.md) on
 > 2026-07-31, *before* the first build command. The register is append-only;
@@ -28,18 +30,22 @@ Designed and written by **Ronak Patel**
 > both before that milestone's first build command; the register itself was not
 > reworded. The [M2 log](docs/build-log/m2-paved-road.md) and the
 > [register](docs/build-log/claims-register.md) record which, and when. Each
-> milestone grades claims with evidence — including the misses. Fifteen of the
-> 34 claims carry a grade, the latest from the M2b close (2026-10-31): eleven
-> HELD, four ADJUSTED (the design had to change; superseding ADR linked),
-> none WRONG.
+> milestone grades claims with evidence — including the misses. Twenty-four of
+> the 34 claims carry a grade, the latest from the M3 close (2026-11-03):
+> thirteen HELD, nine ADJUSTED (the claim held after a design change;
+> superseding ADR linked), one PARTIAL, one NOT REACHED, none UNSUPPORTED or
+> WRONG. From M3 on, grades use
+> [ADR-0020](docs/adr/0020-a-failed-test-is-graded-without-abandoning-the-design.md)'s
+> six words, and four of M3's ADJUSTED and its PARTIAL sit at ceilings fixed
+> before the run, because one person on both sides of a rule cannot show more.
 > Five of the HELD grades are scoped in the register itself. C-03 and C-04
 > held only for the part of the surface built so far. C-02 held on tear-down
 > and rebuild times and manual steps; its third pre-registered measure,
 > actual monthly spend, covers only M1's last two days, because the billing
 > export, switched on at M1's close, holds data from 2026-08-27. C-30 and C-33
-> held with the scopes their cells state. The other nineteen are untested,
-> including one M2 stretch claim (C-08) that was not attempted, C-25, whose
-> subject was removed, and C-32, whose test did not run.
+> held with the scopes their cells state, and C-10's ADJUSTED carries one too.
+> The other ten are untested: the eight M4 claims, C-25, whose subject was
+> removed, and C-32, whose test did not run.
 > Follow along — this repo is being built in public.
 
 ## The pattern in five sentences

@@ -70,7 +70,10 @@ superseding it.
 | [ADR-0019](0019-a-file-change-deletes-no-tenant-by-itself.md) §1, §2 | Accepted · September 2026 | Applied to routes with one stated exception: the two edge ApplicationSets do not carry its four settings, so a removed route file removes its route, and renaming or emptying a route folder removes every route in it | [ADR-0021 §3](0021-the-approval-boundary-on-the-config-connector-engine.md) |
 | [ADR-0019](0019-a-file-change-deletes-no-tenant-by-itself.md) | Accepted · September 2026 | Otherwise current | — |
 | [ADR-0020](0020-a-failed-test-is-graded-without-abandoning-the-design.md) | Accepted · October 2026 | Current; nothing later yet | — |
-| [ADR-0021](0021-the-approval-boundary-on-the-config-connector-engine.md) | Accepted · October 2026 | Current; nothing later yet | — |
+| [ADR-0021](0021-the-approval-boundary-on-the-config-connector-engine.md) §15 | Accepted · October 2026 | The allow list's DNS rule, as shipped in platform-config#21, superseded: egress is allowed to NodeLocal DNSCache (`k8s-app=node-local-dns`) as well as `kube-dns`, on UDP and TCP 53 | [ADR-0023 §1](0023-what-the-m3-build-changed.md) |
+| [ADR-0021](0021-the-approval-boundary-on-the-config-connector-engine.md) §10 | Accepted · October 2026 | Not superseded; C-10's headline is read with an exception until the workflow that produces the required check is protected, and the guard is decided: `.github/**` joins the `security` team's required-review patterns | [ADR-0023 §2](0023-what-the-m3-build-changed.md) |
+| [ADR-0021](0021-the-approval-boundary-on-the-config-connector-engine.md) | Accepted · October 2026 | Otherwise current | — |
+| [ADR-0023](0023-what-the-m3-build-changed.md) | Accepted · November 2026 | Current; nothing later yet | — |
 
 ADR-0006, ADR-0007 and ADR-0011 have no row of their own, because nothing
 later touches them yet — ADR-0011 appears above only as what changed ADR-0009.

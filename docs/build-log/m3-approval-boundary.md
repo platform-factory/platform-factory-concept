@@ -692,3 +692,19 @@ looked right on a running pod and broke every new one.
   live for the first time (242 s, no intervention, nothing left), and `park`
   of both instances (113 s).
 - C-32 (M2b) still waits on the billing export.
+
+## Post-close addendum, 2026-11-11: C-10's guard is recorded
+
+ADR-0023 §2 decided that `.github/**` joins the `security` team's
+required-review patterns in edge-config's ruleset, and said C-10's headline
+reads with its exception until that record exists. It exists now. On 2026-11-11
+at 21:51:53Z the ruleset's `file_patterns` became `external/**` and
+`.github/**` (history 56118811 → 57378541; no other rule changed), recorded as
+steps 09 and 10 in `platform-factory/.github` (#6). edge-config#19, the
+counter-example, was reopened to read it: CLEAN on 2026-10-29, now BLOCKED with
+`security` requested, although its edited workflow still reports `route files`
+as passing. It was closed again without merging.
+
+C-10's grade does not change. What the read shows is what C-09's shows: GitHub
+enforces the pattern. With one person as author and as `security`'s only
+member, it does not show that a second person reads a workflow change.

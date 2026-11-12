@@ -1,6 +1,8 @@
 # Explaining the Factory
 
-Design doc, July 2026. The articulation layer: how to explain the
+Design doc, July 2026; annotated against the build 2026-11-11 (see the dated
+notes under "Borrow the driving concepts" and "What the framing commits the
+design to"). The articulation layer: how to explain the
 platform-plus-factory pattern so it lands with every role it touches. The
 technical docs (`platform-pattern.md`, `knowledge-as-code.md`) say what the
 system *is*; this doc says how to *tell* it — in the README, the launch blog
@@ -71,6 +73,19 @@ the ladder's machinery:
    passively monitors"; a class either gets genuine review (L1, kept honest by
    the approval packet) or earns machine-gated autonomy. Camping in between is
    where the incident happens.
+
+*2026-11-11:* this item and "the safety driver getting out of the car" under
+"The confident handover", which calls the L2→L3 step the handover of
+supervision, contradict each other: the second puts a monitoring human at L2,
+and ADR-0007 never said what the person notified at L2 does
+(platform-factory-concept#23). ADR-0024 §3 settles it in ruleset terms. L2 is a
+required-reviewers entry at zero approvals: the team is added to the pull
+request, its approval is optional, and it is not asked to watch for anything,
+because the gates decide. L3 is no
+entry, so nobody is told; it is kept as a definition and not built. Neither is
+passive monitoring. Any escape returns a class to L1, where every merge waits
+for a person (ADR-0024 §9), and L0 is reached only by designation (commitment 4
+below), never by demotion.
 
 ## The confident handover
 
@@ -234,6 +249,12 @@ A frame that changes nothing is marketing. This one generates commitments:
    as an ADR; "permanently L1" must be a visible decision, not a default.
 5. **Game days become a first-class factory institution** — the simulator, on
    the calendar, not an afterthought. ADR pending when designed.
+
+*2026-11-11:* commitments 2 to 5 are not built in M4 and are not scheduled
+(ADR-0024 §15). M4's scorecard is per class, from pull request metadata, not
+per approver, so commitment 2's loop back to each approver does not exist yet;
+break-glass is not tracked as a metric, though M4 lists every owner's lift of a
+rule (C-17's data), which is part of commitment 3.
 
 ## Real-world anchors to verify before publication
 

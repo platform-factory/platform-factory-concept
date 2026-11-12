@@ -32,7 +32,7 @@ ceiling; earlier grades stand under the three.
 | M2 | Paved road | System XR, `svc-hello` + database claim, Compositions + Kyverno guardrails | Declare intent in your own repo → infrastructure materializes, policy replaces review | C-05..C-08 | [m2-paved-road.md](m2-paved-road.md) |
 | M2b | Engine swap (added 2026-09-19, ADR-0017; roles folded in 2026-09-21, ADR-0018; guards added 2026-09-24, ADR-0019) | Config Connector in place of Crossplane; `system` and `claims` Helm charts rendered by platform-owned Applications; the cutover as a rebuild; `platform-roles`, the engine's permissions as four custom roles; guards so that a removed, renamed or broken file deletes no tenant by itself | The paved road's results hold on a smaller engine, the form stays an allowlist without a custom API, what the engine's roles leave out is a deletion lock Google enforces, a rebuild's cost is read from the billing export, not estimated, and a removed, renamed or broken file deletes no tenant by itself | C-26..C-33 | [m2b-engine-swap.md](m2b-engine-swap.md) |
 | M3 | Approval boundary (split 2026-10-27 into M3a and M3b, ADR-0021) | M3a: `edge-config` (folders only; the route chart with a closed schema; CI check), the ruleset's required reviewer on `external/**`, Kyverno reality gates. M3b: the GKE Gateway with Cloud DNS, Certificate Manager and Cloud Armor, the metadata spine's alert join, FQDN egress, per-System Cloud SQL grants, default-deny and Pod Security baseline | Repo boundaries can carry the approval model; every other door to the edge is refused; the spine joins incidents structurally | C-09..C-14, C-24, C-34 | [m3-approval-boundary.md](m3-approval-boundary.md) |
-| M4 | Factory slice | One change class (dependency bump) end-to-end: done-criteria, approval packet, agent-authored PRs, scorecard, L1→L2 promotion | The autonomy ladder works: a change class earns merge rights from its own track record and loses them automatically when a merged change turns out wrong | C-15..C-22, C-25 | — |
+| M4 | Factory slice (pre-registered 2026-11-11, ADR-0024) | One change class, a Go-module bump on `svc-hello` (`go.mod` and `go.sum`, CI-only), end-to-end: tests and a trusted class check as done-criteria, the approval packet, PRs from an agent GitHub App, the scorecard, L1→L2 promotion under a frozen rule, automatic demotion to L1 by a second App, and one release-pinned skill in `platform-knowledge`; the class file and the machinery live in a controls repo the agent cannot reach | The autonomy ladder works: a change class earns merge rights from its own track record and loses them automatically when a merged change turns out wrong | C-15..C-22, C-25 | — |
 
 Milestones are vertical slices: each leaves the system in a complete, honest
 state and grades its claims before the next begins.
@@ -48,6 +48,8 @@ itself stays deferred. C-25's subject is removed by ADR-0017, and its grade
 column is dealt with at M2b's close. C-23 (added 2026-08-06) and C-24 and
 C-25 (added 2026-09-17) were registered after the 2026-07-31
 pre-registration, as were M2b's C-26..C-33; each is dated in the register.
+M4's readiness note (2026-11-11) runs C-15..C-22 and does not run C-25, which
+stays in M4's Claims cell.
 The scoreboard in `claims-register.md` is the authority in every case.
 
 ## Entry template

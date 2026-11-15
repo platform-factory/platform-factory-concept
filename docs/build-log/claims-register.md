@@ -1725,6 +1725,73 @@ changed.
    field in one ruleset. This is a probe fallback, so it is a deviation for
    the entry. Before the class file's first commit.
 
+**Corrections after probes P2 and P3, 2026-11-15, each before the step it
+bears on.** P2 ran as expected and triggered no fallback. P3 ran on the
+throwaway repository with the agent App and the listed human's approvals.
+As expected: a content push after approval dismisses it and the App's merge
+is refused; with the rung entry at 0 an unapproved App pull request on
+`go.mod` merges; the App's approval counts on neither entry; the App's label
+events name it as actor. Two results differ from what this note and
+ADR-0024 expected, and one human step reads differently than it was
+written. ADR-0024 and the note are not edited; they are read with these
+corrections, which continue the numbering above. No claim's pass line,
+*Falsified if* or ceiling changes. When this was written both Apps existed,
+the agent App was installed on the throwaway repository only, the class
+file had no commit, and nothing on `svc-hello` had changed.
+
+7. *What dismisses an approval (P3 (a); ADR-0024 §4).* ADR-0024 §4 says an
+   approval given at L1 does not survive a later push, and P3 (a) expected
+   the approval dismissed and the merge refused after a content push, an
+   empty commit and an update of the branch. Observed: only the content
+   push dismissed it. After the App's empty commit, and after its update
+   from the base, GitHub kept the listed human's approval, re-pointed the
+   review's `commit_id` to the new head and let the App's merge through.
+   GitHub dismisses an approval on a required-reviewers entry only when the
+   pull request's diff changes. In both cases what merged was the diff the
+   listed human had approved. P3 (a)'s fallback applies: the merge step
+   refuses at L1 unless the listed human's latest approval is on the head
+   commit, and C-15 and C-21 record that this lock is code, not GitHub.
+   Because GitHub re-points `commit_id`, "on the head commit" cannot be read
+   from the review's commit alone. The merge step also requires the review's
+   `submitted_at`, which GitHub does not rewrite, to be no earlier than the
+   start of `class-scope`'s first run on the head. That time is written by
+   GitHub Actions; the agent App holds no `checks` permission and cannot
+   write it. So after an empty commit or an update from `main`, the merge
+   step's own included, the listed human approves again. This holds for
+   the whole of L1. While a seed can still open, the merge step asks GitHub
+   for nothing without such an approval. After that it asks GitHub when
+   there is no approval at all, which is C-15's L1 refusal case, and still
+   waits when the approval standing is older than the head. At L2 the rung
+   entry asks for no approval and an approval's age decides nothing.
+   C-21's attempt "a push to a fixture pull request after the listed human
+   approved it" is a content push, which P3 showed dismissed and refused,
+   so its expectation stands. This is a probe fallback, so it is a
+   deviation for the entry. Before the class file's first commit.
+
+8. *App events carry no `performed_via_github_app` (P2; P3 (d); ADR-0024
+   §6).* ADR-0024 §6 and C-17's Data say a human label counts only when its
+   event carries no `performed_via_github_app`, read from the REST schema
+   as the mark of an App's act. Observed: the field is null on the agent
+   App's own label events and on a workflow token's, as it is on a
+   person's. The actor is what differs: the App's events name
+   `platform-factory-agent[bot]`, the workflow's `github-actions[bot]`. The
+   rule already has two parts, a listed human login and no such field, and
+   the login is the part that holds: an App cannot act under a person's
+   login. Nothing a claim counts changes. Where the machinery tells an
+   App's act from a person's (the unknowns C-17 and C-21 list), it goes by
+   the actor's login, not by the field. P3 (d)'s question, whether the
+   events name the App as actor, is answered yes, so its fallback is not
+   triggered. Before the class file's first commit.
+
+9. *The usage export (human step 5).* The step says to switch on the
+   provider's usage export before the first agent run. The provider has no
+   such switch: it records usage for every key and shows it afterwards.
+   The step is read as: before the first agent run, the maintainer confirms
+   that token counts are recorded. Each run record carries the counts the
+   model's API responses returned, which is what the scorecard reads, and
+   the provider's own usage pages are the cross-check. The maintainer
+   confirmed this on 2026-11-15, before any agent run.
+
 ## Out of scope here
 
 The historical anchors in `factory-framing.md` (SAE levels, Phoenix, the 2023

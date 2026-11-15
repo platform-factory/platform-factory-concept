@@ -1641,6 +1641,90 @@ roles. C-22 runs no question bank. C-25 is not run. C-12's remainder does not
 run in M4, though M3's note sent it here. A probe fallback, if triggered, is a
 deviation, and the entry records which.
 
+**Corrections after the `m4-preregistered` tag, 2026-11-15, each before the
+step it bears on.** The local build of M4's machinery, and its review, found
+five places where the build adds to this note or reads it more narrowly than
+its words, and probe P1 triggered one fallback whose consequences the note
+did not spell out. ADR-0024 and the note are not edited. They are read with
+these corrections, and M4's entry lists them under errata. No claim's pass
+line, *Falsified if* or ceiling changes. When this was written, human steps
+1 to 3 and probes P1 and P2 were done, and P2 triggered no fallback; neither
+App existed, the class file had no commit, and nothing on `svc-hello` had
+changed.
+
+1. *A second key in human step 5.* The model's job hands its summary to the
+   opening job as an artifact, and artifacts on a public repository can be
+   read. A seed's pull request carries a substituted summary, so a readable
+   artifact would tell a seed from a real item before the review. The summary
+   is therefore padded to a fixed length and encrypted to a certificate
+   committed in the controls repo (`agent/summary-recipient.pem`). The private
+   key is a third secret in the `agent-app` environment, `SUMMARY_KEY`. The
+   owner generates the pair and stores the key without displaying it, in
+   human step 5, and gives the certificate to the delegate to commit. The
+   delegate never holds the key. This is one owner act more than the sixteen
+   listed. Before human step 5.
+
+2. *When the promotion record opens (C-19; ADR-0024 §8).* "At the 20th
+   consecutive clean merge the scorecard job opens the promotion record" is
+   read as: once the 20th merge, and each merge counted, has passed its
+   30-minute escape (a) window with a first-attempt `push` run of `go-test`
+   green. A merge is not known clean before that. The record therefore opens
+   at the first agent run after that window, 30 to 60 minutes after the 20th
+   merge or later if a run is delayed, and the listed human approves no
+   queue-item pull request in between. C-19's pass line is unchanged. Before
+   the L1 run.
+
+3. *What resets the streak after the switch-on.* "A change to what `go-test`
+   or `class-scope` decides resets the streak" is applied by path, not by
+   judgment. Any commit on `svc-hello`'s `main` after the L1 switch-on that
+   touches `.github/workflows/validate.yml`,
+   `.github/workflows/class-scope.yml`, `.github/class-scope/**` or a
+   `*_test.go` file resets the streak, whatever it changes. The rule errs
+   toward a reset. The scorecard's count applies it. A change to the class
+   file or to the controls repo's code does not reset the streak; it is
+   listed in the entry, as the note already says. Before the L1 switch-on.
+
+4. *A seed whose head changed.* The note voids a seed whose head changed
+   before the decision. It also has the merge step update a queue-item pull
+   request that another merge left behind `main`. On a seed the two rules
+   meet. A seed is not void when its head changed only by an update from
+   `main` (GitHub's update-branch merge commit, or the merge step making the
+   change again on `main`'s tip) and `go.mod` and `go.sum` at the new head
+   are byte-equal to those at the recorded head. A `class-scope` fail whose
+   only reason is a head behind `main` does not void a seed either. Any other
+   change of head, and any change of body, voids it as before. Before the L1
+   run.
+
+5. *P4.* P4 opens one pull request on the throwaway repository and does not
+   merge it: the merge step needs the ratchet App, a detector heartbeat and
+   `svc-hello`'s ruleset, and none exists there. `merged_by` for an App's
+   merge is read from P3 (b) instead. P4 writes its records to a branch
+   `records-p4` and reads a copy of the class file outside `classes/`, so
+   neither the `records` branch nor the class file gains a commit from a
+   probe. The two facts that change no decision stay recorded only. Before
+   P4.
+
+6. *Two rulesets (P1's fallback, triggered).* P1 ran on 2026-11-12. GitHub
+   refuses two required-reviewers entries for one team in one ruleset (422,
+   "Required reviewers must be unique"), so the fallback this note fixed
+   applies: two rulesets, one entry each. With them the anchored patterns
+   behave as expected and no pattern changes. The note did not write out
+   what the fallback changes elsewhere, so it is written here.
+   `main-protection`, the ruleset `svc-hello` already has, holds the rung
+   entry, the required checks and every other setting. A second ruleset,
+   `class-wall`, holds only the wall entry, at one approval on every rung;
+   nothing writes it. The ratchet writes only `main-protection`. The
+   detector and the pre-merge job compare both rulesets with their committed
+   JSON, and the repository's list of rulesets with exactly those two; a
+   difference in either has the consequences ADR-0024 §10 gives a ruleset
+   difference. The class file's first commit holds three hashes, not two,
+   and `class-wall`'s id, so the delegate creates `class-wall` on
+   `svc-hello`, disabled, before that commit. The L1 switch-on is then two
+   recorded edits, not one: `class-wall` enabled first, then
+   `main-protection` set to the L1 JSON. The promotion edit is still one
+   field in one ruleset. This is a probe fallback, so it is a deviation for
+   the entry. Before the class file's first commit.
+
 ## Out of scope here
 
 The historical anchors in `factory-framing.md` (SAE levels, Phoenix, the 2023

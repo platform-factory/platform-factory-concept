@@ -1792,6 +1792,60 @@ file had no commit, and nothing on `svc-hello` had changed.
    the provider's own usage pages are the cross-check. The maintainer
    confirmed this on 2026-11-15, before any agent run.
 
+**A correction after the class file's first commit, 2026-11-16, before the
+L1 switch-on.** ADR-0024 §9 and §10 and this note have the detector, the
+agent's workflow and the scorecard start on GitHub's `schedule` event. In
+this organisation GitHub starts no such run. ADR-0024 and the note are not
+edited; they are read with this correction, which continues the numbering
+above. No claim's pass line, *Falsified if* or ceiling changes. When this
+was written the class file had its first commit, the skill's release 1 was
+not yet pinned, `svc-hello`'s rulesets had not been switched to L1, neither
+App was installed on `svc-hello`, and no queue item had been opened.
+
+10. *What starts a run (ADR-0024 §9, §10; C-18, C-22).* Observed on
+    2026-11-15 and 2026-11-16: the detector's ten-minute cron line was live
+    in the controls repo for more than five hours and no run with event
+    `schedule` started. A workflow that does nothing, with a five-minute
+    cron line, was put on the throwaway repository to tell the controls
+    repo from the organisation. It started no run in two hours, and none
+    after its cron line was committed again, which GitHub's documentation
+    gives as the way to register a schedule anew. Both workflows ran when
+    dispatched. No repository in the organisation has ever had a `schedule`
+    run of a workflow file; GitHub's own weekly code-scanning runs, which
+    are not workflow files, do start. None of the causes GitHub documents
+    applies: the
+    workflows are enabled and on the default branch, the repositories are
+    not forks and are not idle, and the account that committed the cron
+    lines is active. GitHub's status page showed no incident. The cause is
+    not known. So the cron lines stay, and a fourth workflow in the controls
+    repo, `clock.yml`, starts the three: one job that sends `detector.yml`,
+    `agent.yml` and `scorecard.yml` a `workflow_dispatch` on `main` at the
+    minutes their own cron lines name, and after five hours dispatches
+    itself again. It holds `actions: write` and `contents: read` on the
+    controls repo and nothing else: no App key, no environment, no secret.
+    The three workflows are unchanged. Each run they make is the run a cron
+    start would have made, with event `workflow_dispatch` and actor
+    `github-actions[bot]` in place of `schedule`, and the entry reads run
+    counts and times from the runs themselves, whatever started them. What
+    this weakens: the clock is started by the delegate, by hand, and cannot
+    restart itself after a run that is cancelled or lost. Until it is
+    started again no detector run and no agent run happens. That stops
+    merges, because the merge step refuses without a detector heartbeat
+    younger than 30 minutes and runs only when something starts it; it also
+    means an escape in that gap is acted on only when the clock is running
+    again. C-18's times from escape to demotion are therefore read with the
+    clock's log beside them, and every start of the clock by hand, with its
+    time and reason, is listed in the entry. If GitHub begins to start
+    `schedule` runs during the window, a workflow runs twice at its minute;
+    the concurrency groups already put such runs in a line, and the entry
+    says from when. For C-22, the freshness check in `platform-knowledge`
+    has the same cron-line trigger and the clock cannot reach another
+    repository, so that check runs on dispatch only; its true positive and
+    true negative were registered as dispatched runs and are not affected.
+    This departs from "runs on a schedule" in how a run starts, not in what
+    a run does, and it is a deviation for the entry. Before the L1
+    switch-on.
+
 ## Out of scope here
 
 The historical anchors in `factory-framing.md` (SAE levels, Phoenix, the 2023

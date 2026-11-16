@@ -1795,7 +1795,7 @@ file had no commit, and nothing on `svc-hello` had changed.
 **A correction after the class file's first commit, 2026-11-16, before the
 L1 switch-on.** ADR-0024 §9 and §10 and this note have the detector, the
 agent's workflow and the scorecard start on GitHub's `schedule` event. In
-this organisation GitHub starts no such run. ADR-0024 and the note are not
+this organisation GitHub starts almost no such run. ADR-0024 and the note are not
 edited; they are read with this correction, which continues the numbering
 above. No claim's pass line, *Falsified if* or ceiling changes. When this
 was written the class file had its first commit, the skill's release 1 was
@@ -1810,10 +1810,14 @@ App was installed on `svc-hello`, and no queue item had been opened.
     repo from the organisation. It started no run in two hours, and none
     after its cron line was committed again, which GitHub's documentation
     gives as the way to register a schedule anew. Both workflows ran when
-    dispatched. No repository in the organisation has ever had a `schedule`
-    run of a workflow file; GitHub's own weekly code-scanning runs, which
-    are not workflow files, do start. None of the causes GitHub documents
-    applies: the
+    dispatched. Until then no repository in the organisation had ever had
+    a `schedule` run of a workflow file; GitHub's own weekly code-scanning
+    runs, which are not workflow files, do start. Later on 2026-11-16 each
+    cron line started one run: the detector's at 07:13Z, of about seventy
+    due by 12:00Z, and the do-nothing workflow's at 11:43Z, of about a
+    hundred due. The scorecard's daily line started none at its hour. So
+    the schedule is not dead; it is far too rare to keep a 30-minute
+    heartbeat. None of the causes GitHub documents applies: the
     workflows are enabled and on the default branch, the repositories are
     not forks and are not idle, and the account that committed the cron
     lines is active. GitHub's status page showed no incident. The cause is
@@ -1835,10 +1839,10 @@ App was installed on `svc-hello`, and no queue item had been opened.
     means an escape in that gap is acted on only when the clock is running
     again. C-18's times from escape to demotion are therefore read with the
     clock's log beside them, and every start of the clock by hand, with its
-    time and reason, is listed in the entry. If GitHub begins to start
-    `schedule` runs during the window, a workflow runs twice at its minute;
-    the concurrency groups already put such runs in a line, and the entry
-    says from when. For C-22, the freshness check in `platform-knowledge`
+    time and reason, is listed in the entry. When GitHub does start a
+    `schedule` run during the window, that workflow runs twice at that
+    minute; the concurrency groups already put such runs in a line, and the
+    entry counts the `schedule` runs. For C-22, the freshness check in `platform-knowledge`
     has the same cron-line trigger and the clock cannot reach another
     repository, so that check runs on dispatch only; its true positive and
     true negative were registered as dispatched runs and are not affected.
